@@ -7,6 +7,7 @@ import ProductDetail from '../pages/ProductDetail.vue'
 import CollectionDetail from '../pages/CollectionDetail.vue'
 import AccountPage from '../pages/AccountPage.vue'
 import LoginPage from '../pages/LoginPage.vue'
+import DynamicPage from '../pages/DynamicPage.vue'
 
 import CartPage from '../pages/CartPage.vue'
 import OrderConfirmation from '../pages/OrderConfirmation.vue'
@@ -31,6 +32,8 @@ const routes = [
       { path: 'wishlist', name: 'Wishlist', component: WishlistPage, meta: { requiresAuth: true } },
       { path: 'orders', name: 'MyOrders', component: MyOrdersPage, meta: { requiresAuth: true } },
       { path: 'search', name: 'SearchResults', component: () => import('../pages/SearchResults.vue') },
+  // Fallback dynamic page renderer (matches any path not above)
+  { path: ':pathMatch(.*)*', name: 'DynamicPage', component: DynamicPage },
     ],
   },
 ];

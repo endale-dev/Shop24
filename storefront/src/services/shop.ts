@@ -32,16 +32,61 @@ export function getPersistedShopData(): Shop | null {
 }
 
 export function getCurrentShopSlug(): string | null {
-  // Prefer subdomain when available
+  // 1) Prefer subdomain when available
   const fromSubdomain = getShopSlugFromSubdomain();
   if (fromSubdomain) return fromSubdomain;
-  // Fallback to persisted value
+
+  // 2) Check query params for explicit shop slug
+  try {
+    const qp = new URLSearchParams(window.location.search)
+    const shopParam = qp.get('shop') || qp.get('shopSlug')
+    if (shopParam) {
+      setCurrentShopSlug(shopParam)
+      return shopParam
+    }
+  } catch {}
+
+  // 3) Fallback to persisted value
   const persisted = getPersistedShopSlug();
   if (persisted) return persisted;
-  // Dev convenience: allow an env-provided default when running without subdomain
+
+  // 4) Dev convenience: allow an env-provided default when running without subdomain
   const envDefault = (import.meta as any).env?.VITE_DEFAULT_SHOP_SLUG as string | undefined
   if (envDefault) return envDefault;
+
   return null;
+}
+
+// Resolve a shop slug -> shop object (including id) using public storefront API
+export async function resolveShopBySlug(slug: string): Promise<Shop | null> {
+  if (!slug) return null
+  try {
+    const response = await api.get(getShopUrl(slug, ''))
+    return response.data as Shop
+  } catch (err) {
+    console.error('Failed to resolve shop by slug', err)
+    return null
+  }
+}
+
+// Convenience: get a storeId (ObjectID hex) for the current context. Will try query param, window.__STORE_ID__, or resolve via shop slug.
+export async function getCurrentStoreId(): Promise<string | null> {
+  // 1) explicit query param
+  try {
+    const qp = new URLSearchParams(window.location.search)
+    const storeId = qp.get('storeId')
+    if (storeId) return storeId
+  } catch {}
+
+  // 2) injected global
+  const globalId = (window as any).__STORE_ID__
+  if (globalId) return String(globalId)
+
+  // 3) resolve from slug
+  const slug = getCurrentShopSlug()
+  if (!slug) return null
+  const shop = await resolveShopBySlug(slug)
+  return shop?.id ?? null
 }
 
 export async function fetchShop(shopSlug?: string): Promise<Shop | null> {

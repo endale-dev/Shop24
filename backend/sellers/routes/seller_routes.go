@@ -130,6 +130,24 @@ func SellerRoute(r *gin.Engine) {
 			analyticsGroup.GET("/dashboard", controllers.GetShopDashboardAnalytics) // NEW ENDPOINT
 		}
 
+		// ───── Theme & Page builder endpoints (seller-only) ─────
+		themeGroup := shopGroup.Group("/themes")
+		{
+			// POST /seller/shops/:shopId/themes
+			themeGroup.POST("", controllers.CreateTheme)
+			// GET /seller/shops/:shopId/themes
+			themeGroup.GET("", controllers.ListThemes)
+			// PATCH /seller/shops/:shopId/themes/:themeId/activate
+			themeGroup.PATCH(":themeId/activate", controllers.ActivateTheme)
+		}
+
+		pageGroup := shopGroup.Group("/pages")
+		{
+			pageGroup.POST("", controllers.CreatePage)
+			pageGroup.PATCH(":pageId", controllers.UpdatePage)
+			pageGroup.POST(":pageId/publish", controllers.PublishPage)
+		}
+
 	}
 
 }
