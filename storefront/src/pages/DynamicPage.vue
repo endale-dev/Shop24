@@ -1,41 +1,85 @@
 <template>
-  <div>
-    <PageRenderer v-if="snapshot && snapshot.blocks" :blocks="snapshot.blocks" />
-    <div v-else class="py-24 text-center">Loading page...</div>
+  <div v-if="shopStore.isLoading && !shopStore.shop" class="min-h-screen flex items-center justify-center">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+  </div>
+  
+  <div v-else-if="shopStore.error" class="min-h-screen flex flex-col items-center justify-center p-4">
+    <h1 class="text-2xl font-bold text-red-600 mb-2">Store Unavailable</h1>
+    <p class="text-gray-600">{{ shopStore.error }}</p>
+  </div>
+  
+  <div v-else class="dynamic-page" :style="cssVariables">
+    <!-- Header Blocks -->
+    <DynamicBlock v-for="block in headerBlocks" :key="block.id" :block="block" />
+    
+    <!-- Main Page Content Blocks -->
+    <main class="min-h-[50vh]">
+      <DynamicBlock v-for="block in pageContentBlocks" :key="block.id" :block="block" />
+      <div v-if="pageContentBlocks.length === 0" class="text-center py-20 text-gray-500">
+        No content available for this page
+      </div>
+    </main>
+
+    <!-- Footer Blocks -->
+    <DynamicBlock v-for="block in footerBlocks" :key="block.id" :block="block" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import PageRenderer from '@/components/PageRenderer.vue'
-import { getCurrentShopSlug, getCurrentStoreId } from '@/services/shop'
+import { computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useShopStore } from '../stores/shop'
+import DynamicBlock from '../components/DynamicBlock.vue'
 
-const snapshot = ref<any | null>(null)
-
-async function fetchSnapshot(path: string) {
-  const shopSlug = getCurrentShopSlug()
-  if (!shopSlug) return null
-  const url = new URL(`/shops/${shopSlug}/page`, window.location.origin)
-  url.searchParams.set('path', path)
-  const storeId = await getCurrentStoreId()
-  if (storeId) url.searchParams.set('storeId', storeId)
-
-  const res = await fetch(url.toString(), { credentials: 'include' })
-  if (!res.ok) { return null }
-  const data = await res.json()
-  return data.snapshot
-}
+const route = useRoute()
+const shopStore = useShopStore()
 
 onMounted(async () => {
-  const p = window.location.pathname || '/'
-  const snap = await fetchSnapshot(p)
-  if (snap) {
-    if (snap.tokens) {
-      for (const [k, v] of Object.entries(snap.tokens)) {
-        document.documentElement.style.setProperty(`--token-${k}`, String(v))
-      }
-    }
-    snapshot.value = snap
+  await shopStore.initialize()
+  await shopStore.loadPage(route.path)
+})
+
+watch(() => route.path, async (newPath) => {
+  if (shopStore.shop) {
+    await shopStore.loadPage(newPath)
+  }
+})
+
+const headerBlocks = computed(() => {
+  return shopStore.theme?.headerBlocks || []
+})
+
+const footerBlocks = computed(() => {
+  return shopStore.theme?.footerBlocks || []
+})
+
+const pageContentBlocks = computed(() => {
+  if (shopStore.currentPage?.blocks) {
+    return shopStore.currentPage.blocks
+  }
+  return [] // fallback
+})
+
+const cssVariables = computed(() => {
+  if (!shopStore.theme?.colors) return {}
+  const colors = shopStore.theme.colors
+  return {
+    '--color-primary': colors.primary,
+    '--color-secondary': colors.secondary,
+    '--color-accent': colors.accent,
+    '--color-background': colors.background,
+    '--color-surface': colors.surface,
+    '--color-text-primary': colors.textPrimary,
+    '--color-text-secondary': colors.textSecondary,
+    '--color-border': colors.border,
   }
 })
 </script>
+
+<style>
+.dynamic-page {
+  background-color: var(--color-background, #ffffff);
+  color: var(--color-text-primary, #111827);
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+</style>

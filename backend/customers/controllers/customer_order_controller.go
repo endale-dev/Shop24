@@ -3,7 +3,6 @@ package controllers
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Endale2/DRPS/shared/models"
 	"github.com/Endale2/DRPS/shared/services"
@@ -11,18 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// OrderItemRequest represents the minimal data needed from client for order placement
-type OrderItemRequest struct {
-	ProductID string `json:"product_id" binding:"required"`
-	VariantID string `json:"variant_id,omitempty"` // optional, empty string for no variant
-	Quantity  int    `json:"quantity" binding:"required,min=1"`
-}
-
-// PlaceOrderRequest represents the complete request structure for placing an order
-type PlaceOrderRequest struct {
-	Items []OrderItemRequest `json:"items" binding:"required,min=1"`
-}
 
 // DebugProduct handles GET /shops/:shopSlug/debug/product/:productId
 func DebugProduct(c *gin.Context) {
@@ -211,7 +198,7 @@ func TestDiscounts(c *gin.Context) {
 			"type":                discount.Type,
 			"value":               discount.Value,
 			"category":            discount.Category,
-			"active":              discount.IsActive(),
+			"active":              services.IsDiscountActive(&discount),
 			"shop_id":             discount.ShopID.Hex(),
 			"applies_to_products": discount.AppliesToProducts,
 			"applies_to_variants": discount.AppliesToVariants,
@@ -234,7 +221,7 @@ func TestDiscounts(c *gin.Context) {
 
 		// Test discount calculation
 		testPrice := 100.0
-		savings := discount.CalculateDiscount(testPrice)
+		savings := services.CalculateDiscountAmount(&discount, testPrice)
 		result["test_calculation"] = map[string]interface{}{
 			"test_price":  testPrice,
 			"savings":     savings,
@@ -255,6 +242,7 @@ func TestDiscounts(c *gin.Context) {
 
 // PlaceOrder handles POST /shops/:shopSlug/orders
 func PlaceOrder(c *gin.Context) {
+	// Get shop by slug
 	shopSlug := c.Param("shopSlug")
 	shop, err := services.GetShopBySlugService(shopSlug)
 	if err != nil {
@@ -266,7 +254,7 @@ func PlaceOrder(c *gin.Context) {
 		return
 	}
 
-	// Get customer ID from authentication
+	// Get authenticated customer ID
 	cidVal, exists := c.Get("user_id")
 	if !exists || cidVal == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
@@ -286,269 +274,44 @@ func PlaceOrder(c *gin.Context) {
 	// Link customer to shop if not already linked
 	_, _, _ = services.LinkIfNotLinked(shop.ID, customerID)
 
-	// Parse request - ONLY accept minimal data from frontend
-	var req PlaceOrderRequest
+	// Parse request
+	var req services.PlaceOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Validate request - ensure we only have the minimal required data
+	// Validate request
 	if len(req.Items) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no items in order"})
 		return
 	}
 
-	// Get customer segments for discount validation
-	customerSegmentIDs, err := services.GetCustomerSegmentIDs(shop.ID, customerID)
+	// Delegate to service - ALL business logic handled there
+	result, err := services.PlaceOrderFromRequest(shop.ID, customerID, req)
 	if err != nil {
-		customerSegmentIDs = []primitive.ObjectID{}
-	}
-
-	// Initialize order variables
-	var orderItems []models.OrderItem
-	var itemDiscountDetails []map[string]interface{}
-	subtotal := 0.0
-	totalDiscount := 0.0
-	appliedDiscountIDsMap := make(map[primitive.ObjectID]struct{})
-
-	// Process each item - ALL pricing calculated server-side
-	for _, itemReq := range req.Items {
-		// Validate product ID
-		productID, err := primitive.ObjectIDFromHex(itemReq.ProductID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID: " + itemReq.ProductID})
-			return
+		// Map service errors to HTTP status codes
+		switch err {
+		case services.ErrInvalidProductID, services.ErrInvalidVariantID, services.ErrInvalidQuantity:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case services.ErrProductNotFound, services.ErrVariantNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case services.ErrProductNotInShop:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case services.ErrInsufficientStock:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
-
-		// Validate variant ID if provided
-		variantID := primitive.NilObjectID
-		if itemReq.VariantID != "" {
-			variantID, err = primitive.ObjectIDFromHex(itemReq.VariantID)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid variant ID: " + itemReq.VariantID})
-				return
-			}
-		}
-
-		// Validate quantity
-		if itemReq.Quantity <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "quantity must be positive"})
-			return
-		}
-
-		// Fetch product from database - server-side validation
-		product, err := services.GetProductByIDService(itemReq.ProductID)
-		if err != nil || product == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "product not found: " + itemReq.ProductID})
-			return
-		}
-
-		// Validate product belongs to this shop
-		if product.ShopID != shop.ID {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "product not found in this shop"})
-			return
-		}
-
-		// Determine unit price and product details - server-side calculation
-		var unitPrice float64
-		var productName string
-		var productImage string
-		var stock int
-		var orderVariantID primitive.ObjectID
-
-		// Check if product has variants
-		hasRealVariants := len(product.Variants) > 0
-
-		if hasRealVariants && !variantID.IsZero() {
-			// Variant-specific pricing
-			var foundVariant *models.Variant
-			for i := range product.Variants {
-				if product.Variants[i].VariantID == variantID {
-					foundVariant = &product.Variants[i]
-					break
-				}
-			}
-			if foundVariant == nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "variant not found: " + itemReq.VariantID + " for product: " + itemReq.ProductID})
-				return
-			}
-			unitPrice = foundVariant.Price
-			productName = product.Name
-			if len(foundVariant.Options) > 0 {
-				productName += " - "
-				for i, opt := range foundVariant.Options {
-					if i > 0 {
-						productName += ", "
-					}
-					productName += opt.Name + ": " + opt.Value
-				}
-			}
-			if foundVariant.Image != "" {
-				productImage = foundVariant.Image
-			} else {
-				productImage = product.MainImage
-			}
-			stock = foundVariant.Stock
-			orderVariantID = variantID
-		} else {
-			// Product-level pricing
-			unitPrice = product.Price
-			productName = product.Name
-			productImage = product.MainImage
-			stock = product.Stock
-			orderVariantID = primitive.NilObjectID
-		}
-
-		// Validate stock availability
-		if stock < itemReq.Quantity {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "insufficient stock for product/variant: " + itemReq.ProductID})
-			return
-		}
-
-		// Calculate line total server-side
-		lineTotal := unitPrice * float64(itemReq.Quantity)
-		subtotal += lineTotal
-
-		// Get collection IDs for discount eligibility
-		collectionIDs, err := services.GetCollectionIDsForProduct(productID)
-		if err != nil {
-			collectionIDs = []primitive.ObjectID{}
-		}
-
-		// Get active discounts for this product/variant - ALL discount logic server-side
-		discounts, err := services.GetActiveDiscountsForProductService(shop.ID, productID, variantID, collectionIDs)
-		if err != nil {
-			discounts = []models.Discount{}
-		}
-
-		// Find best eligible discount - server-side calculation only
-		var bestDiscount *models.Discount
-		bestSavings := 0.0
-
-		// Use the improved discount selection logic
-		bestDiscount, _ = services.GetBestEligibleDiscountForProduct(productID, variantID, customerID, customerSegmentIDs, discounts)
-
-		if bestDiscount != nil {
-			// Calculate actual savings for this specific order
-			bestSavings = bestDiscount.CalculateDiscountForQuantity(unitPrice, itemReq.Quantity)
-		} else {
-		}
-
-		// Apply discount if found - server-side calculation
-		itemDiscountAmount := 0.0
-		appliedDiscountIDs := []primitive.ObjectID{}
-		if bestDiscount != nil && bestSavings > 0 {
-			itemDiscountAmount = bestSavings
-			appliedDiscountIDs = append(appliedDiscountIDs, bestDiscount.ID)
-			appliedDiscountIDsMap[bestDiscount.ID] = struct{}{}
-		}
-
-		totalDiscount += itemDiscountAmount
-		finalLineTotal := lineTotal - itemDiscountAmount
-		if finalLineTotal < 0 {
-			finalLineTotal = 0
-		}
-
-		// Store discount details for response
-		itemDiscountDetails = append(itemDiscountDetails, map[string]interface{}{
-			"product_id":           productID.Hex(),
-			"variant_id":           variantID.Hex(),
-			"unit_price":           unitPrice,
-			"quantity":             itemReq.Quantity,
-			"line_total":           lineTotal,
-			"discount":             itemDiscountAmount,
-			"final_line_total":     finalLineTotal,
-			"applied_discount_ids": appliedDiscountIDs,
-		})
-
-		// Create order item with server-calculated pricing
-		orderItem := models.OrderItem{
-			ProductID:  productID,
-			VariantID:  orderVariantID,
-			Name:       productName,
-			Quantity:   itemReq.Quantity,
-			UnitPrice:  unitPrice,
-			TotalPrice: finalLineTotal, // Use server-calculated discounted price
-			Image:      productImage,
-		}
-		orderItems = append(orderItems, orderItem)
-	}
-
-	// Calculate final totals server-side
-	finalTotal := subtotal - totalDiscount
-	if finalTotal < 0 {
-		finalTotal = 0
-	}
-
-	// Prepare applied discount IDs
-	appliedDiscountIDs := make([]primitive.ObjectID, 0, len(appliedDiscountIDsMap))
-	for id := range appliedDiscountIDsMap {
-		appliedDiscountIDs = append(appliedDiscountIDs, id)
-	}
-
-	// Create order with server-calculated totals
-	order := &models.Order{
-		ShopID:             shop.ID,
-		CustomerID:         customerID,
-		Items:              orderItems,
-		Subtotal:           subtotal,
-		DiscountTotal:      totalDiscount,
-		Total:              finalTotal,
-		Status:             "pending",
-		AppliedDiscountIDs: appliedDiscountIDs,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
-	}
-
-	// Save order to database
-	created, err := services.CreateOrderService(order)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Record discount usage
-	for id := range appliedDiscountIDsMap {
-		for _, item := range itemDiscountDetails {
-			for _, appliedID := range item["applied_discount_ids"].([]primitive.ObjectID) {
-				if appliedID == id {
-					_ = services.RecordDiscountUsageAtomic(id.Hex(), customerID, item["line_total"].(float64))
-				}
-			}
-		}
-	}
-
-	// Reduce stock for all items
-	for _, itemReq := range req.Items {
-		productID, _ := primitive.ObjectIDFromHex(itemReq.ProductID)
-		if itemReq.VariantID != "" {
-			variantID, _ := primitive.ObjectIDFromHex(itemReq.VariantID)
-			if !variantID.IsZero() {
-				err := services.ReduceVariantStock(productID, variantID, itemReq.Quantity)
-				if err != nil {
-					// fmt.Printf("Warning: Failed to reduce stock for variant %s: %v\n", itemReq.VariantID, err)
-				}
-			} else {
-				err := services.ReduceProductStock(productID, itemReq.Quantity)
-				if err != nil {
-					// fmt.Printf("Warning: Failed to reduce stock for product %s: %v\n", itemReq.ProductID, err)
-				}
-			}
-		} else {
-			err := services.ReduceProductStock(productID, itemReq.Quantity)
-			if err != nil {
-				// fmt.Printf("Warning: Failed to reduce stock for product %s: %v\n", itemReq.ProductID, err)
-			}
-		}
-	}
-
-	// Return order with server-calculated totals
+	// Return success response
 	c.JSON(http.StatusCreated, gin.H{
-		"id":                    created.ID.Hex(),
-		"order":                 created,
-		"item_discount_details": itemDiscountDetails,
-		"server_calculated":     true, // Flag to indicate all pricing was calculated server-side
+		"id":                    result.Order.ID.Hex(),
+		"order":                 result.Order,
+		"item_discount_details": result.ItemDiscountDetails,
+		"server_calculated":     true,
 		"security_note":         "All pricing calculated securely on server",
 	})
 }

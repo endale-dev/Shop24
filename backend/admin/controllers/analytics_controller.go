@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"net/http"
-	"sort"
 
 	"github.com/Endale2/DRPS/shared/repositories"
+	"github.com/Endale2/DRPS/shared/services"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -26,11 +26,9 @@ func GetTotalRevenue(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching orders"})
 		return
 	}
-	total := 0.0
-	for _, o := range orders {
-		total += o.Total
-	}
-	c.JSON(http.StatusOK, gin.H{"total_revenue": total})
+
+	totalRevenue := services.CalculateTotalRevenue(orders)
+	c.JSON(http.StatusOK, gin.H{"total_revenue": totalRevenue})
 }
 
 // GetOrderCount returns the total number of orders
@@ -50,26 +48,9 @@ func GetTopProducts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching orders"})
 		return
 	}
-	productSales := map[string]int{}
-	for _, o := range orders {
-		for _, item := range o.Items {
-			productSales[item.ProductID.Hex()] += item.Quantity
-		}
-	}
-	// Convert to slice and sort (top 5)
-	type kv struct {
-		Key   string
-		Value int
-	}
-	var sorted []kv
-	for k, v := range productSales {
-		sorted = append(sorted, kv{k, v})
-	}
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Value > sorted[j].Value })
-	if len(sorted) > 5 {
-		sorted = sorted[:5]
-	}
-	c.JSON(http.StatusOK, sorted)
+
+	topProducts := services.GetTopProductsBySalesCount(orders, 5)
+	c.JSON(http.StatusOK, topProducts)
 }
 
 // GetTopCustomers returns the top N customers by order count
@@ -79,21 +60,7 @@ func GetTopCustomers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching orders"})
 		return
 	}
-	customerOrders := map[string]int{}
-	for _, o := range orders {
-		customerOrders[o.CustomerID.Hex()]++
-	}
-	type kv struct {
-		Key   string
-		Value int
-	}
-	var sorted []kv
-	for k, v := range customerOrders {
-		sorted = append(sorted, kv{k, v})
-	}
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Value > sorted[j].Value })
-	if len(sorted) > 5 {
-		sorted = sorted[:5]
-	}
-	c.JSON(http.StatusOK, sorted)
+
+	topCustomers := services.GetTopCustomersByOrderCountAsMap(orders, 5)
+	c.JSON(http.StatusOK, topCustomers)
 }

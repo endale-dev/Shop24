@@ -2,16 +2,52 @@ package services
 
 import (
 	"errors"
+	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/Endale2/DRPS/shared/models"
 	"github.com/Endale2/DRPS/shared/repositories"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var slugLetters = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+func randSlugSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = slugLetters[rand.Intn(len(slugLetters))]
+	}
+	return string(b)
+}
+
+// GenerateUniqueProductSlug converts a name to a URL-friendly slug and ensures uniqueness within the shop
+func GenerateUniqueProductSlug(name string, shopID primitive.ObjectID) string {
+	slug := strings.ToLower(name)
+	slug = strings.ReplaceAll(slug, " ", "-")
+	slug = strings.ReplaceAll(slug, "_", "-")
+	baseSlug := slug
+
+	rand.Seed(time.Now().UnixNano())
+	try := 0
+	for {
+		// Check if a product with this slug exists in this shop
+		filter := bson.M{"slug": slug, "shop_id": shopID}
+		products, _ := repositories.GetProductsByFilter(filter)
+		if len(products) == 0 {
+			return slug
+		}
+		// If exists, append random 4 chars
+		slug = baseSlug + "-" + randSlugSeq(4)
+		try++
+		if try > 5 { // fallback: add timestamp
+			slug = baseSlug + "-" + time.Now().Format("20060102150405")
+			return slug
+		}
+	}
+}
 
 // slugify takes a name (e.g. "Catan Base Game") and returns
 // a simple URL‑friendly slug ("catan-base-game").

@@ -48,3 +48,34 @@ func (r *PageRepository) PublishSnapshot(ctx context.Context, id primitive.Objec
 	return err
 }
 
+// ListByStore returns all pages for a given store
+func (r *PageRepository) ListByStore(ctx context.Context, storeID primitive.ObjectID) ([]*models.Page, error) {
+	cursor, err := r.col.Find(ctx, bson.M{"store_id": storeID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var pages []*models.Page
+	if err := cursor.All(ctx, &pages); err != nil {
+		return nil, err
+	}
+	return pages, nil
+}
+
+// FindByID returns a page by its ID
+func (r *PageRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*models.Page, error) {
+	var page models.Page
+	err := r.col.FindOne(ctx, bson.M{"_id": id}).Decode(&page)
+	if err != nil {
+		return nil, err
+	}
+	return &page, nil
+}
+
+// DeleteByID deletes a page by its ID
+func (r *PageRepository) DeleteByID(ctx context.Context, id primitive.ObjectID) error {
+	_, err := r.col.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+

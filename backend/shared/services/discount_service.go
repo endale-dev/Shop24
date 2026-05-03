@@ -20,6 +20,255 @@ var ErrDiscountNotStarted = errors.New("discount has not started yet")
 var ErrDiscountInvalidValue = errors.New("invalid discount value")
 var ErrDiscountInvalidType = errors.New("invalid discount type")
 
+// ============================================================================
+// BUSINESS LOGIC FUNCTIONS (extracted from model)
+// ============================================================================
+
+// IsDiscountActive checks if the discount is currently active
+func IsDiscountActive(d *models.Discount) bool {
+	now := time.Now()
+
+	// Check if discount is marked as active
+	if !d.Active {
+		return false
+	}
+
+	// Check start time (if StartAt is zero, consider it as "started")
+	if !d.StartAt.IsZero() && now.Before(d.StartAt) {
+		return false
+	}
+
+	// Check end time (if EndAt is zero, consider it as "no end")
+	if !d.EndAt.IsZero() && now.After(d.EndAt) {
+		return false
+	}
+
+	return true
+}
+
+// IsDiscountExpired checks if the discount has expired
+func IsDiscountExpired(d *models.Discount) bool {
+	if d.EndAt.IsZero() {
+		return false // No end date means never expires
+	}
+	return time.Now().After(d.EndAt)
+}
+
+// IsDiscountNotStarted checks if the discount hasn't started yet
+func IsDiscountNotStarted(d *models.Discount) bool {
+	if d.StartAt.IsZero() {
+		return false // No start date means already started
+	}
+	return time.Now().Before(d.StartAt)
+}
+
+// IsCustomerEligibleForDiscount checks if a customer is eligible for this discount
+func IsCustomerEligibleForDiscount(d *models.Discount, customerID primitive.ObjectID, customerSegmentIDs []primitive.ObjectID) bool {
+	switch d.EligibilityType {
+	case models.DiscountEligibilityAll:
+		return true
+	case models.DiscountEligibilitySpecific:
+		// Check if customer is in the allowed list
+		if len(d.AllowedCustomerIDs) > 0 {
+			for _, allowedID := range d.AllowedCustomerIDs {
+				if allowedID == customerID {
+					return true
+				}
+			}
+		}
+
+		// Also check if customer is in any of the allowed segments (for mixed eligibility)
+		if len(d.AllowedSegmentIDs) > 0 {
+			for _, segmentID := range d.AllowedSegmentIDs {
+				for _, customerSegmentID := range customerSegmentIDs {
+					if segmentID == customerSegmentID {
+						return true
+					}
+				}
+			}
+		}
+
+		// If no customers or segments are listed, allow everyone
+		if len(d.AllowedCustomerIDs) == 0 && len(d.AllowedSegmentIDs) == 0 {
+			return true
+		}
+
+		return false
+	case models.DiscountEligibilitySegment:
+		// If no segments are listed, allow everyone
+		if len(d.AllowedSegmentIDs) == 0 {
+			return true
+		}
+		// Check if customer is in any of the allowed segments
+		for _, segmentID := range d.AllowedSegmentIDs {
+			for _, customerSegmentID := range customerSegmentIDs {
+				if segmentID == customerSegmentID {
+					return true
+				}
+			}
+		}
+		return false
+	default:
+		return true
+	}
+}
+
+// CanCustomerUseDiscountLimit checks if a customer can use this discount (considering usage limits)
+func CanCustomerUseDiscountLimit(d *models.Discount, customerID primitive.ObjectID) bool {
+	// Check overall usage limit
+	if d.UsageLimit != nil && d.CurrentUsage >= *d.UsageLimit {
+		return false
+	}
+
+	// Check per-customer limit
+	if d.PerCustomerLimit != nil {
+		for _, usage := range d.UsageTracking {
+			if usage.CustomerID == customerID && usage.UsageCount >= *d.PerCustomerLimit {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// CalculateDiscountAmount calculates the discount amount for a given price
+func CalculateDiscountAmount(d *models.Discount, price float64) float64 {
+	switch d.Type {
+	case models.DiscountTypeFixed:
+		// For fixed amount discounts, apply the discount amount directly
+		// This represents a fixed amount off the total price
+		if d.Value > price {
+			return price
+		}
+		return d.Value
+	case models.DiscountTypePercentage:
+		return price * (d.Value / 100)
+	default:
+		return 0
+	}
+}
+
+// CalculateDiscountAmountForQuantity calculates the discount amount for a given price and quantity
+// This is useful for fixed amount discounts that should be applied per unit
+func CalculateDiscountAmountForQuantity(d *models.Discount, unitPrice float64, quantity int) float64 {
+	switch d.Type {
+	case models.DiscountTypeFixed:
+		// For fixed amount discounts, apply per unit
+		discountPerUnit := d.Value
+		if discountPerUnit > unitPrice {
+			discountPerUnit = unitPrice
+		}
+		return discountPerUnit * float64(quantity)
+	case models.DiscountTypePercentage:
+		// For percentage discounts, apply to the total line price
+		totalPrice := unitPrice * float64(quantity)
+		return totalPrice * (d.Value / 100)
+	default:
+		return 0
+	}
+}
+
+// RecordDiscountUsage records a usage of this discount by a customer
+// This modifies the discount object in memory - caller must persist to DB
+func RecordDiscountUsage(d *models.Discount, customerID primitive.ObjectID, amount float64) {
+	d.CurrentUsage++
+	now := time.Now()
+
+	// Find existing usage record for this customer
+	for i := range d.UsageTracking {
+		if d.UsageTracking[i].CustomerID == customerID {
+			d.UsageTracking[i].UsageCount++
+			d.UsageTracking[i].LastUsedAt = now
+			d.UsageTracking[i].TotalSpent += amount
+			return
+		}
+	}
+
+	// Create new usage record
+	d.UsageTracking = append(d.UsageTracking, models.DiscountUsage{
+		CustomerID: customerID,
+		UsageCount: 1,
+		LastUsedAt: now,
+		TotalSpent: amount,
+	})
+}
+
+// ValidateDiscountStruct validates the discount configuration
+func ValidateDiscountStruct(d *models.Discount) error {
+	if d.Name == "" {
+		return errors.New("discount name is required")
+	}
+	if d.ShopID.IsZero() {
+		return errors.New("shop ID is required")
+	}
+	if d.Category == "" {
+		return errors.New("discount category is required")
+	}
+	if d.Type == "" {
+		return errors.New("discount type is required")
+	}
+	if d.Value <= 0 {
+		return errors.New("discount value must be positive")
+	}
+	if d.Type == models.DiscountTypePercentage && d.Value > 100 {
+		return errors.New("percentage discount cannot exceed 100%")
+	}
+	if !d.StartAt.IsZero() && !d.EndAt.IsZero() && d.EndAt.Before(d.StartAt) {
+		return errors.New("end time must be after start time")
+	}
+	return nil
+}
+
+// GetDiscountUsageCountForCustomer returns the number of times a customer has used this discount
+func GetDiscountUsageCountForCustomer(d *models.Discount, customerID primitive.ObjectID) int {
+	for _, usage := range d.UsageTracking {
+		if usage.CustomerID == customerID {
+			return usage.UsageCount
+		}
+	}
+	return 0
+}
+
+// GetDiscountTotalSpentByCustomer returns the total amount spent by a customer using this discount
+func GetDiscountTotalSpentByCustomer(d *models.Discount, customerID primitive.ObjectID) float64 {
+	for _, usage := range d.UsageTracking {
+		if usage.CustomerID == customerID {
+			return usage.TotalSpent
+		}
+	}
+	return 0
+}
+
+// GetDiscountRemainingUsage returns the remaining usage count for the discount
+func GetDiscountRemainingUsage(d *models.Discount) *int {
+	if d.UsageLimit == nil {
+		return nil // No limit
+	}
+	remaining := *d.UsageLimit - d.CurrentUsage
+	if remaining < 0 {
+		remaining = 0
+	}
+	return &remaining
+}
+
+// GetDiscountRemainingUsageForCustomer returns the remaining usage count for a specific customer
+func GetDiscountRemainingUsageForCustomer(d *models.Discount, customerID primitive.ObjectID) *int {
+	if d.PerCustomerLimit == nil {
+		return nil // No per-customer limit
+	}
+	used := GetDiscountUsageCountForCustomer(d, customerID)
+	remaining := *d.PerCustomerLimit - used
+	if remaining < 0 {
+		remaining = 0
+	}
+	return &remaining
+}
+
+// ============================================================================
+// SERVICE LAYER FUNCTIONS
+// ============================================================================
+
 func CreateDiscountService(d *models.Discount) (*models.Discount, error) {
 	// Enhanced validation
 	if d.Name == "" {
@@ -148,17 +397,17 @@ func DeleteDiscountService(idStr string) error {
 // ValidateDiscountForCustomer validates if a customer can use a discount
 func ValidateDiscountForCustomer(discount *models.Discount, customerID primitive.ObjectID, customerSegmentIDs []primitive.ObjectID) error {
 	// Check if discount is active
-	if !discount.IsActive() {
+	if !IsDiscountActive(discount) {
 		return ErrDiscountNotActive
 	}
 
 	// Check eligibility
-	if !discount.IsEligible(customerID, customerSegmentIDs) {
+	if !IsCustomerEligibleForDiscount(discount, customerID, customerSegmentIDs) {
 		return ErrDiscountNotEligible
 	}
 
 	// Check usage limits
-	if !discount.CanUse(customerID) {
+	if !CanCustomerUseDiscountLimit(discount, customerID) {
 		return ErrDiscountUsageLimitExceeded
 	}
 
@@ -169,12 +418,12 @@ func ValidateDiscountForCustomer(discount *models.Discount, customerID primitive
 // This is a more comprehensive check that includes all validation rules
 func CanCustomerUseDiscount(discount *models.Discount, customerID primitive.ObjectID, customerSegmentIDs []primitive.ObjectID) (bool, error) {
 	// Check if discount is active
-	if !discount.IsActive() {
+	if !IsDiscountActive(discount) {
 		return false, ErrDiscountNotActive
 	}
 
 	// Check eligibility
-	if !discount.IsEligible(customerID, customerSegmentIDs) {
+	if !IsCustomerEligibleForDiscount(discount, customerID, customerSegmentIDs) {
 		return false, ErrDiscountNotEligible
 	}
 
@@ -203,7 +452,7 @@ func ApplyDiscountToOrder(discount *models.Discount, order *models.Order, custom
 	}
 
 	// Calculate discount amount
-	discountAmount := discount.CalculateDiscount(order.Subtotal)
+	discountAmount := CalculateDiscountAmount(discount, order.Subtotal)
 
 	// Apply discount
 	order.DiscountTotal = discountAmount
@@ -216,7 +465,7 @@ func ApplyDiscountToOrder(discount *models.Discount, order *models.Order, custom
 	}
 
 	// Record usage
-	discount.RecordUsage(customerID, order.Subtotal)
+	RecordDiscountUsage(discount, customerID, order.Subtotal)
 
 	// Update discount in database
 	_, err := repositories.UpdateDiscount(discount.ID, bson.M{
@@ -244,7 +493,7 @@ func GetEligibleDiscountsForCustomer(shopID, customerID primitive.ObjectID, cust
 	// Filter to only eligible discounts
 	var eligibleDiscounts []models.Discount
 	for _, discount := range discounts {
-		if discount.IsActive() && discount.IsEligible(customerID, customerSegmentIDs) && discount.CanUse(customerID) {
+		if IsDiscountActive(&discount) && IsCustomerEligibleForDiscount(&discount, customerID, customerSegmentIDs) && CanCustomerUseDiscountLimit(&discount, customerID) {
 			eligibleDiscounts = append(eligibleDiscounts, discount)
 		}
 	}
@@ -270,7 +519,7 @@ func GetCustomerSegmentIDs(shopID, customerID primitive.ObjectID) ([]primitive.O
 
 // ValidateUsageLimits validates if a discount can be used by a customer
 func ValidateUsageLimits(discount *models.Discount, customerID primitive.ObjectID) (bool, error) {
-	return discount.CanUse(customerID), nil
+	return CanCustomerUseDiscountLimit(discount, customerID), nil
 }
 
 // ApplyDiscountsToProduct applies the best discount to a product
@@ -282,7 +531,7 @@ func ApplyDiscountsToProduct(product *models.Product, discounts []models.Discoun
 
 		for i := range discounts {
 			d := &discounts[i]
-			if d.Category != models.DiscountCategoryProduct || !d.IsActive() {
+			if d.Category != models.DiscountCategoryProduct || !IsDiscountActive(d) {
 				continue
 			}
 
@@ -330,7 +579,7 @@ func ApplyDiscountsToProduct(product *models.Product, discounts []models.Discoun
 			v := &product.Variants[i]
 			best := getBestDiscount(product.ID, v.VariantID)
 			if best != nil {
-				discounted := v.Price - best.CalculateDiscount(v.Price)
+				discounted := v.Price - CalculateDiscountAmount(best, v.Price)
 				// Only set display price if it's actually discounted
 				if discounted < v.Price {
 					v.DisplayPrice = &discounted
@@ -349,7 +598,7 @@ func ApplyDiscountsToProduct(product *models.Product, discounts []models.Discoun
 		// Simple product (no variants)
 		best := getBestDiscount(product.ID, primitive.NilObjectID)
 		if best != nil {
-			discounted := product.Price - best.CalculateDiscount(product.Price)
+			discounted := product.Price - CalculateDiscountAmount(best, product.Price)
 			// Only set display price if it's actually discounted
 			if discounted < product.Price {
 				product.DisplayPrice = &discounted
@@ -395,7 +644,7 @@ func GetBestProductDiscount(productID, variantID primitive.ObjectID, discounts [
 			}
 		}
 
-		if applies && d.IsActive() {
+		if applies && IsDiscountActive(d) {
 			// Calculate actual savings for comparison
 			var estimatedSavings float64
 			if d.Type == models.DiscountTypePercentage {
@@ -426,7 +675,7 @@ func GetDiscountUsageStats(discountID string) (map[string]interface{}, error) {
 		"total_usage":      discount.CurrentUsage,
 		"usage_limit":      discount.UsageLimit,
 		"usage_tracking":   discount.UsageTracking,
-		"is_active":        discount.IsActive(),
+		"is_active":        IsDiscountActive(discount),
 		"eligibility_type": discount.EligibilityType,
 	}
 
@@ -469,7 +718,7 @@ func RecordDiscountUsageAtomic(discountID string, customerID primitive.ObjectID,
 	}
 
 	// Validate usage limits before recording
-	if !discount.CanUse(customerID) {
+	if !CanCustomerUseDiscountLimit(discount, customerID) {
 		return ErrDiscountUsageLimitExceeded
 	}
 
@@ -566,7 +815,7 @@ func GetDiscountStatusForCustomer(discount *models.Discount, customerID primitiv
 	}
 
 	// Check if discount is active
-	if !discount.IsActive() {
+	if !IsDiscountActive(discount) {
 		status.IsAvailable = false
 		status.IsDisabled = true
 		status.Reason = "Discount is not active"
@@ -641,7 +890,7 @@ func GetBestEligibleDiscountForProduct(productID, variantID primitive.ObjectID, 
 		}
 
 		// Check if customer is eligible
-		if !d.IsEligible(customerID, customerSegmentIDs) {
+		if !IsCustomerEligibleForDiscount(d, customerID, customerSegmentIDs) {
 			continue
 		}
 

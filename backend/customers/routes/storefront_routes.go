@@ -14,6 +14,9 @@ func StorefrontRoutes(r *gin.Engine) {
 		// GET /shops/:shopSlug → view shop details (legacy)
 		shops.GET("/:shopSlug", custControllers.GetStorefront)
 
+		// GET /shops/:shopSlug/theme → get active theme (public)
+		shops.GET("/:shopSlug/theme", custControllers.GetShopTheme)
+
 		// Collection endpoints nested under /shops/:shopSlug/collections
 		collections := shops.Group("/:shopSlug/collections")
 		{

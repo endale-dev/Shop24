@@ -1,14 +1,11 @@
 package controllers
 
 import (
-	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Endale2/DRPS/shared/models"
-	"github.com/Endale2/DRPS/shared/repositories"
 	"github.com/Endale2/DRPS/shared/services"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -42,41 +39,6 @@ type createProductInput struct {
 	// SEO fields
 	MetaTitle       string `json:"meta_title"`
 	MetaDescription string `json:"meta_description"`
-}
-
-// slugify converts a name to a URL-friendly slug and ensures uniqueness within the shop.
-func slugifyUnique(name string, shopID primitive.ObjectID) string {
-	slug := strings.ToLower(name)
-	slug = strings.ReplaceAll(slug, " ", "-")
-	slug = strings.ReplaceAll(slug, "_", "-")
-	baseSlug := slug
-
-	rand.Seed(time.Now().UnixNano())
-	try := 0
-	for {
-		// Check if a product with this slug exists in this shop
-		filter := bson.M{"slug": slug, "shop_id": shopID}
-		products, _ := repositories.GetProductsByFilter(filter)
-		if len(products) == 0 {
-			return slug
-		}
-		// If exists, append random 4 chars
-		slug = baseSlug + "-" + randSeq(4)
-		try++
-		if try > 5 { // fallback: add timestamp
-			slug = baseSlug + "-" + time.Now().Format("20060102150405")
-		}
-	}
-}
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-
-func randSeq(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }
 
 // CreateProduct handles POST /seller/shops/:shopId/products
@@ -130,7 +92,8 @@ func CreateProduct(c *gin.Context) {
 		}
 	}
 
-	slug := slugifyUnique(in.Name, shopID)
+	slug := services.GenerateUniqueProductSlug(in.Name, shopID)
+
 	// Validate and convert collection_ids
 	var collectionOIDs []primitive.ObjectID
 	for _, collectionIDStr := range in.CollectionIDs {

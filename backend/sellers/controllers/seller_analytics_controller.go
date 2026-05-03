@@ -36,16 +36,9 @@ func getShopAndVerifySeller(c *gin.Context) (*models.Shop, primitive.ObjectID, b
 	return shop, shopID, true
 }
 
-// Helper: filter orders by status considered as 'sold'
+// Helper: filter orders by status considered as 'sold' - DEPRECATED, use services.FilterSoldOrders
 func filterSoldOrders(orders []models.Order) []models.Order {
-	var filtered []models.Order
-	for _, o := range orders {
-		status := o.Status
-		if status == "paid" || status == "shipped" || status == "delivered" {
-			filtered = append(filtered, o)
-		}
-	}
-	return filtered
+	return services.FilterSoldOrders(orders)
 }
 
 // GET /seller/shops/:shopId/analytics/summary
@@ -59,29 +52,11 @@ func GetShopAnalyticsSummary(c *gin.Context) {
 	customers, _ := repositories.GetShopCustomerLinks(shopID)
 	products, _ := services.GetProductsByShopIDService(shopID)
 
-	totalRevenue := 0.0
+	totalRevenue := services.CalculateTotalRevenue(orders)
 	totalOrders := len(orders)
-	customerOrderCount := make(map[primitive.ObjectID]int)
-	for _, o := range orders {
-		totalRevenue += o.Total
-		customerOrderCount[o.CustomerID]++
-	}
-	totalCustomers := len(customers)
-	newCustomers := 0
-	returningCustomers := 0
-	cutoff := time.Now().AddDate(0, 0, -30)
-	for _, cst := range customers {
-		if cst.CreatedAt.After(cutoff) {
-			newCustomers++
-		}
-		if customerOrderCount[cst.CustomerID] > 1 {
-			returningCustomers++
-		}
-	}
-	avgOrderValue := 0.0
-	if totalOrders > 0 {
-		avgOrderValue = totalRevenue / float64(totalOrders)
-	}
+	newCustomers := services.CountNewCustomers(customers, 30)
+	returningCustomers := services.CountReturningCustomers(customers, orders)
+	avgOrderValue := services.CalculateAverageOrderValue(orders)
 
 	c.JSON(http.StatusOK, gin.H{
 		"total_revenue":       totalRevenue,
@@ -89,7 +64,7 @@ func GetShopAnalyticsSummary(c *gin.Context) {
 		"new_customers":       newCustomers,
 		"avg_order_value":     avgOrderValue,
 		"total_products":      len(products),
-		"total_customers":     totalCustomers,
+		"total_customers":     len(customers),
 		"returning_customers": returningCustomers,
 	})
 }
@@ -109,27 +84,7 @@ func GetShopRevenueOverTime(c *gin.Context) {
 	orders, _ := services.ListOrdersByShopService(shopID.Hex())
 	orders = filterSoldOrders(orders)
 
-	// Build daily revenue
-	revenueMap := make(map[string]float64)
-	now := time.Now()
-	for i := 0; i < days; i++ {
-		date := now.AddDate(0, 0, -i).Format("2006-01-02")
-		revenueMap[date] = 0
-	}
-	for _, o := range orders {
-		date := o.CreatedAt.Format("2006-01-02")
-		if _, ok := revenueMap[date]; ok {
-			revenueMap[date] += o.Total
-		}
-	}
-	// Sort by date ascending
-	var labels []string
-	var values []float64
-	for i := days - 1; i >= 0; i-- {
-		date := now.AddDate(0, 0, -i).Format("2006-01-02")
-		labels = append(labels, date)
-		values = append(values, revenueMap[date])
-	}
+	labels, values := services.GetRevenueOverTime(orders, days)
 	c.JSON(http.StatusOK, gin.H{"labels": labels, "values": values})
 }
 
@@ -147,25 +102,8 @@ func GetShopOrdersOverTime(c *gin.Context) {
 	}
 	orders, _ := services.ListOrdersByShopService(shopID.Hex())
 	orders = filterSoldOrders(orders)
-	orderMap := make(map[string]int)
-	now := time.Now()
-	for i := 0; i < days; i++ {
-		date := now.AddDate(0, 0, -i).Format("2006-01-02")
-		orderMap[date] = 0
-	}
-	for _, o := range orders {
-		date := o.CreatedAt.Format("2006-01-02")
-		if _, ok := orderMap[date]; ok {
-			orderMap[date]++
-		}
-	}
-	var labels []string
-	var values []int
-	for i := days - 1; i >= 0; i-- {
-		date := now.AddDate(0, 0, -i).Format("2006-01-02")
-		labels = append(labels, date)
-		values = append(values, orderMap[date])
-	}
+
+	labels, values := services.GetOrdersOverTime(orders, days)
 	c.JSON(http.StatusOK, gin.H{"labels": labels, "values": values})
 }
 
@@ -178,47 +116,9 @@ func GetShopTopProducts(c *gin.Context) {
 	orders, _ := services.ListOrdersByShopService(shopID.Hex())
 	orders = filterSoldOrders(orders)
 	products, _ := services.GetProductsByShopIDService(shopID)
-	productSales := map[primitive.ObjectID]int{}
-	productRevenue := map[primitive.ObjectID]float64{}
-	for _, o := range orders {
-		for _, item := range o.Items {
-			productSales[item.ProductID] += item.Quantity
-			productRevenue[item.ProductID] += item.TotalPrice
-		}
-	}
 
-	type prodStat struct {
-		ID           primitive.ObjectID `json:"id"`
-		Name         string             `json:"name"`
-		Category     string             `json:"category"`
-		MainImage    string             `json:"mainImage"`
-		TotalSold    int                `json:"totalSold"`
-		TotalRevenue float64            `json:"totalRevenue"`
-	}
-	var stats []prodStat
-	for _, p := range products {
-		collTitle := ""
-		// Get the first collection title if the product has collections
-		if len(p.CollectionIDs) > 0 {
-			coll, _ := sellerRepositories.GetCollectionByID(p.CollectionIDs[0])
-			if coll != nil {
-				collTitle = coll.Title
-			}
-		}
-		stats = append(stats, prodStat{
-			ID:           p.ID,
-			Name:         p.Name,
-			Category:     collTitle,
-			MainImage:    p.MainImage,
-			TotalSold:    productSales[p.ID],
-			TotalRevenue: productRevenue[p.ID],
-		})
-	}
-	sort.Slice(stats, func(i, j int) bool { return stats[i].TotalRevenue > stats[j].TotalRevenue })
-	if len(stats) > 5 {
-		stats = stats[:5]
-	}
-	c.JSON(http.StatusOK, stats)
+	topProducts := services.GetTopProductsByRevenue(orders, products, 5)
+	c.JSON(http.StatusOK, topProducts)
 }
 
 // GET /seller/shops/:shopId/analytics/top-customers
@@ -229,24 +129,9 @@ func GetShopTopCustomers(c *gin.Context) {
 	}
 	orders, _ := services.ListOrdersByShopService(shopID.Hex())
 	orders = filterSoldOrders(orders)
-	customerOrders := map[primitive.ObjectID]int{}
-	for _, o := range orders {
-		customerOrders[o.CustomerID]++
-	}
 
-	type custStat struct {
-		ID    primitive.ObjectID `json:"id"`
-		Count int                `json:"orderCount"`
-	}
-	var stats []custStat
-	for cid, count := range customerOrders {
-		stats = append(stats, custStat{ID: cid, Count: count})
-	}
-	sort.Slice(stats, func(i, j int) bool { return stats[i].Count > stats[j].Count })
-	if len(stats) > 5 {
-		stats = stats[:5]
-	}
-	c.JSON(http.StatusOK, stats)
+	topCustomers := services.GetTopCustomersByOrderCount(orders, 5)
+	c.JSON(http.StatusOK, topCustomers)
 }
 
 // GET /seller/shops/:shopId/analytics/inventory-status
@@ -256,24 +141,13 @@ func GetShopInventoryStatus(c *gin.Context) {
 		return
 	}
 	products, _ := services.GetProductsByShopIDService(shopID)
-	total := len(products)
-	inStock := 0
-	lowStock := 0
-	outOfStock := 0
-	for _, p := range products {
-		if p.Stock > 10 {
-			inStock++
-		} else if p.Stock > 0 {
-			lowStock++
-		} else {
-			outOfStock++
-		}
-	}
+
+	inventoryStatus := services.GetInventoryStatus(products)
 	c.JSON(http.StatusOK, gin.H{
-		"total_products": total,
-		"in_stock":       inStock,
-		"low_stock":      lowStock,
-		"out_of_stock":   outOfStock,
+		"total_products": inventoryStatus.TotalProducts,
+		"in_stock":       inventoryStatus.InStock,
+		"low_stock":      inventoryStatus.LowStock,
+		"out_of_stock":   inventoryStatus.OutOfStock,
 	})
 }
 
@@ -321,25 +195,8 @@ func GetShopCustomersOverTime(c *gin.Context) {
 		}
 	}
 	customers, _ := repositories.GetShopCustomerLinks(shopID)
-	growthMap := make(map[string]int)
-	now := time.Now()
-	for i := 0; i < days; i++ {
-		date := now.AddDate(0, 0, -i).Format("2006-01-02")
-		growthMap[date] = 0
-	}
-	for _, cst := range customers {
-		date := cst.CreatedAt.Format("2006-01-02")
-		if _, ok := growthMap[date]; ok {
-			growthMap[date]++
-		}
-	}
-	var labels []string
-	var values []int
-	for i := days - 1; i >= 0; i-- {
-		date := now.AddDate(0, 0, -i).Format("2006-01-02")
-		labels = append(labels, date)
-		values = append(values, growthMap[date])
-	}
+
+	labels, values := services.GetCustomersOverTime(customers, days)
 	c.JSON(http.StatusOK, gin.H{"labels": labels, "values": values})
 }
 
@@ -534,7 +391,7 @@ func GetShopDashboardAnalytics(c *gin.Context) {
 	}
 	activeDiscounts := 0
 	for _, d := range discounts {
-		if d.IsActive() {
+		if services.IsDiscountActive(&d) {
 			activeDiscounts++
 		}
 	}

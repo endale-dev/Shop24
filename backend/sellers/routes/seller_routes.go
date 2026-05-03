@@ -137,14 +137,27 @@ func SellerRoute(r *gin.Engine) {
 			themeGroup.POST("", controllers.CreateTheme)
 			// GET /seller/shops/:shopId/themes
 			themeGroup.GET("", controllers.ListThemes)
+			// GET /seller/shops/:shopId/themes/active
+			themeGroup.GET("/active", controllers.GetActiveTheme)
 			// PATCH /seller/shops/:shopId/themes/:themeId/activate
 			themeGroup.PATCH(":themeId/activate", controllers.ActivateTheme)
+			// PATCH /seller/shops/:shopId/themes/:themeId/colors
+			themeGroup.PATCH(":themeId/colors", controllers.UpdateThemeColors)
+			// PATCH /seller/shops/:shopId/themes/:themeId/typography
+			themeGroup.PATCH(":themeId/typography", controllers.UpdateThemeTypography)
+			// PATCH /seller/shops/:shopId/themes/:themeId/layout
+			themeGroup.PATCH(":themeId/layout", controllers.UpdateThemeLayout)
+			// PATCH /seller/shops/:shopId/themes/:themeId/assets
+			themeGroup.PATCH(":themeId/assets", controllers.UpdateThemeAssets)
 		}
 
 		pageGroup := shopGroup.Group("/pages")
 		{
+			pageGroup.GET("", controllers.ListPages)
 			pageGroup.POST("", controllers.CreatePage)
+			pageGroup.GET(":pageId", controllers.GetPage)
 			pageGroup.PATCH(":pageId", controllers.UpdatePage)
+			pageGroup.DELETE(":pageId", controllers.DeletePage)
 			pageGroup.POST(":pageId/publish", controllers.PublishPage)
 		}
 

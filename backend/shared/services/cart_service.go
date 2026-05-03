@@ -182,7 +182,7 @@ func (s *CartService) CalculateTotals(cart *models.Cart, customerID primitive.Ob
 			bestDiscount, _ := GetBestEligibleDiscountForProduct(item.ProductID, item.VariantID, customerID, customerSegmentIDs, discounts)
 
 			if bestDiscount != nil {
-				itemDiscountAmount = bestDiscount.CalculateDiscountForQuantity(item.UnitPrice, item.Quantity)
+				itemDiscountAmount = CalculateDiscountAmountForQuantity(bestDiscount, item.UnitPrice, item.Quantity)
 				item.AppliedDiscountIDs = append(item.AppliedDiscountIDs, bestDiscount.ID)
 			}
 		}
@@ -208,8 +208,8 @@ func (s *CartService) findBestDiscount(discounts []models.Discount, price float6
 
 	for i := range discounts {
 		discount := &discounts[i]
-		if discount.IsActive() {
-			savings := discount.CalculateDiscount(price)
+		if IsDiscountActive(discount) {
+			savings := CalculateDiscountAmount(discount, price)
 			if savings > bestSavings {
 				bestSavings = savings
 				bestDiscount = discount
@@ -227,13 +227,13 @@ func (s *CartService) findBestEligibleDiscount(discounts []models.Discount, unit
 
 	for i := range discounts {
 		discount := &discounts[i]
-		if discount.IsActive() {
+		if IsDiscountActive(discount) {
 			// Use the improved validation function
 			canUse, err := CanCustomerUseDiscount(discount, customerID, customerSegmentIDs)
 
 			if err == nil && canUse {
 				// Calculate actual savings for this discount using the correct method
-				savings := discount.CalculateDiscountForQuantity(unitPrice, quantity)
+				savings := CalculateDiscountAmountForQuantity(discount, unitPrice, quantity)
 
 				if savings > bestSavings {
 					bestSavings = savings
@@ -306,11 +306,11 @@ func (s *CartService) GetCartWithDiscountDetails(cart *models.Cart) (*CartWithDi
 	for _, item := range cart.Items {
 		for _, discountID := range item.AppliedDiscountIDs {
 			discount, err := GetDiscountByIDService(discountID.Hex())
-			if err == nil && discount != nil && discount.IsActive() {
+			if err == nil && discount != nil && IsDiscountActive(discount) {
 				// Use the improved validation function
 				if canUse, err := CanCustomerUseDiscount(discount, *cart.CustomerID, customerSegmentIDs); err == nil && canUse {
 					// Calculate the actual discount amount for this item
-					discountAmount := discount.CalculateDiscountForQuantity(item.UnitPrice, item.Quantity)
+					discountAmount := CalculateDiscountAmountForQuantity(discount, item.UnitPrice, item.Quantity)
 
 					// Get detailed status for this discount
 					status := GetDiscountStatusForCustomer(discount, *cart.CustomerID)

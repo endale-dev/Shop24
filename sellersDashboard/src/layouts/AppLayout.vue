@@ -3,7 +3,7 @@
     <!-- Mobile backdrop overlay -->
     <transition name="fade">
       <div
-        v-if="showSidebar"
+        v-if="showSidebar && !hideLayout"
         class="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
         @click="showSidebar = false"
       />
@@ -11,6 +11,7 @@
 
     <!-- Sidebar -->
     <aside
+      v-if="!hideLayout"
       role="dialog"
       aria-modal="true"
       :class="[
@@ -25,11 +26,11 @@
     <!-- Main content area -->
     <div class="flex-1 flex flex-col overflow-hidden bg-gray-50">
       <!-- Top navigation bar -->
-      <Navbar @toggle-sidebar="showSidebar = !showSidebar" />
+      <Navbar v-if="!hideLayout" @toggle-sidebar="showSidebar = !showSidebar" />
 
       <!-- Main content -->
       <main class="flex-1 overflow-auto">
-        <div class="min-h-full">
+        <div :class="{'min-h-full': !hideLayout, 'h-full': hideLayout}">
           <router-view />
         </div>
       </main>
@@ -38,11 +39,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import Navbar  from '@/components/Navbar.vue'
 
+const route = useRoute()
 const showSidebar = ref(false)
+const hideLayout = computed(() => route.meta.hideLayout)
 
 // Function to close mobile sidebar
 const closeMobileSidebar = () => {

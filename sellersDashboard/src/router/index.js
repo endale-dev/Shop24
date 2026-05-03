@@ -64,6 +64,7 @@ const routes = [
       { path: 'discounts/:discountId/edit', name: 'EditDiscount', component: () => import('@/pages/discounts/EditDiscountPage.vue'), props: true },
       { path: 'analytics',            name: 'Analytics',      component: () => import('@/pages/analytics/AnalyticsPage.vue') },
       { path: 'customization',        name: 'Customization',  component: () => import('@/pages/customization/CustomizationPage.vue') },
+      { path: 'customization/editor', name: 'ShopBuilder',    component: () => import('@/pages/builder/ShopBuilder.vue'), meta: { hideLayout: true } },
       { path: 'customization/theme',  name: 'ThemeCustomization', component: () => import('@/pages/customization/ThemePage.vue') },
       { path: 'customization/layout', name: 'LayoutCustomization', component: () => import('@/pages/customization/LayoutPage.vue') },
       { path: 'customization/typography', name: 'TypographyCustomization', component: () => import('@/pages/customization/TypographyPage.vue') },

@@ -8,6 +8,9 @@ import { useAuthStore } from '@/store/auth'
 import { useShopStore } from '@/store/shops'
 import { useNavigationStore } from '@/store/navigation'
 
+// Import global styles
+import './styles/global.css'
+
 const app = createApp(App)
 const pinia = createPinia()
 

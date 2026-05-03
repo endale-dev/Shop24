@@ -80,6 +80,72 @@ func (s *PageService) GetPublishedByStoreAndPath(ctx context.Context, storeID pr
 	return p, nil
 }
 
+// ListByStore returns all pages for a store (draft and published)
+func (s *PageService) ListByStore(ctx context.Context, storeID primitive.ObjectID) ([]*models.Page, error) {
+	return s.repo.ListByStore(ctx, storeID)
+}
+
+// GetByID returns a single page by its ID
+func (s *PageService) GetByID(ctx context.Context, id primitive.ObjectID) (*models.Page, error) {
+	return s.repo.FindByID(ctx, id)
+}
+
+// Delete removes a page by its ID
+func (s *PageService) Delete(ctx context.Context, id primitive.ObjectID) error {
+	return s.repo.DeleteByID(ctx, id)
+}
+
+// CreateDefaultHomePage creates and publishes a default home page if one doesn't exist
+func (s *PageService) CreateDefaultHomePage(ctx context.Context, storeID primitive.ObjectID) (*models.Page, error) {
+	// Check if already exists
+	existing, err := s.repo.FindByStoreAndPath(ctx, storeID, "/")
+	if err == nil && existing != nil {
+		return existing, nil
+	}
+
+	// Create new default page
+	now := time.Now()
+	page := &models.Page{
+		ID:         primitive.NewObjectID(),
+		StoreID:    storeID,
+		Path:       "/",
+		Title:      "Home",
+		Visibility: "public",
+		Status:     "published",
+		Blocks: []models.PageBlock{
+			{
+				ID:           "default-hero",
+				ComponentKey: "hero",
+				Props: map[string]interface{}{
+					"title":      "Welcome to our Store",
+					"subtitle":   "We offer the best products for you.",
+					"align":      "center",
+					"background": "primary",
+					"showButton": true,
+					"buttonText": "Shop Now",
+					"buttonLink": "/products",
+				},
+			},
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	// Create Snapshot immediately
+	page.Snapshot = map[string]interface{}{
+		"path":        page.Path,
+		"title":       page.Title,
+		"blocks":      page.Blocks,
+		"publishedAt": now,
+	}
+
+	if err := s.repo.Create(ctx, page); err != nil {
+		return nil, err
+	}
+
+	return page, nil
+}
+
 // PageModelFromJSON is a lightweight payload type for incoming JSON -> model conversion
 type PageModelFromJSON struct {
 	Path       string                 `json:"path"`

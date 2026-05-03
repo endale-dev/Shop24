@@ -80,6 +80,59 @@ func PublishPage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// ListPages returns all pages for a shop
+func ListPages(c *gin.Context) {
+	storeIdStr := c.Param("shopId")
+	if storeIdStr == "" {
+		storeIdStr = c.Param("storeId")
+	}
+	sid, err := primitive.ObjectIDFromHex(storeIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shopId/storeId"})
+		return
+	}
+
+	pages, err := pageService.ListByStore(context.Background(), sid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"pages": pages})
+}
+
+// GetPage returns a single page by ID
+func GetPage(c *gin.Context) {
+	pageIdStr := c.Param("pageId")
+	pid, err := primitive.ObjectIDFromHex(pageIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pageId"})
+		return
+	}
+
+	page, err := pageService.GetByID(context.Background(), pid)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
+		return
+	}
+	c.JSON(http.StatusOK, page)
+}
+
+// DeletePage removes a page by ID
+func DeletePage(c *gin.Context) {
+	pageIdStr := c.Param("pageId")
+	pid, err := primitive.ObjectIDFromHex(pageIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pageId"})
+		return
+	}
+
+	if err := pageService.Delete(context.Background(), pid); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // Storefront endpoint: returns published page snapshot for a store and path
 func GetStorefrontPage(c *gin.Context) {
 	// Try to resolve storeId from query param first. If missing, resolve from the path param shopSlug.
@@ -113,6 +166,15 @@ func GetStorefrontPage(c *gin.Context) {
 	}
 	page, err := pageService.GetPublishedByStoreAndPath(context.Background(), sid, path)
 	if err != nil {
+		// If requesting Root and not found, try to create default home page
+		if path == "/" {
+			defaultPage, createErr := pageService.CreateDefaultHomePage(context.Background(), sid)
+			if createErr == nil {
+				c.JSON(http.StatusOK, gin.H{"snapshot": defaultPage.Snapshot})
+				return
+			}
+			// If creation failed, log it but return original error (or createErr)
+		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}

@@ -271,7 +271,7 @@
 
         <!-- Component Library Card -->
         <div
-          @click="goToComponents"
+          @click="goToBuilder"
           class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-md transition duration-200 ease-in-out group"
         >
           <div class="p-6">
@@ -451,6 +451,10 @@ function goToMobile() {
 
 function goToSEO() {
   router.push('/dashboard/customization/seo')
+}
+
+function goToBuilder() {
+  router.push('/dashboard/customization/editor')
 }
 
 // Quick action functions
