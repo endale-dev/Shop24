@@ -48,6 +48,20 @@ func Load() (Config, error) {
 	if provider != "mock" && provider != "openai" {
 		return Config{}, fmt.Errorf("AI_PROVIDER must be mock or openai")
 	}
+	apiKey := strings.TrimSpace(os.Getenv("AI_API_KEY"))
+	baseURL := strings.TrimRight(env("AI_BASE_URL", "https://api.openai.com/v1"), "/")
+	model := env("AI_MODEL", "gpt-4o-mini")
+	if strings.HasPrefix(apiKey, "sk-or-") {
+		if provider == "mock" {
+			provider = "openai"
+		}
+		if baseURL == "" || strings.Contains(baseURL, "api.openai.com") {
+			baseURL = "https://openrouter.ai/api/v1"
+		}
+		if model == "" || model == "gpt-4o-mini" {
+			model = "openai/gpt-4o-mini"
+		}
+	}
 
 	origins := splitCSV(env("CORS_ORIGINS", "http://localhost:5173"))
 	base := strings.ToLower(strings.TrimSpace(env("BASE_DOMAIN", "localhost")))
@@ -66,9 +80,9 @@ func Load() (Config, error) {
 		CORSOrigins:  origins,
 		BaseDomain:   base,
 		AIProvider:   provider,
-		AIAPIKey:     strings.TrimSpace(os.Getenv("AI_API_KEY")),
-		AIModel:      env("AI_MODEL", "gpt-4o-mini"),
-		AIBaseURL:    strings.TrimRight(env("AI_BASE_URL", "https://api.openai.com/v1"), "/"),
+		AIAPIKey:     apiKey,
+		AIModel:      model,
+		AIBaseURL:    baseURL,
 		AITimeout:    time.Duration(aiTimeout) * time.Second,
 	}, nil
 }

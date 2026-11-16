@@ -67,7 +67,7 @@ async function submitStore() {
       <h2 class="font-serif text-2xl">Open your store</h2>
       <p class="text-sm text-stone-600">This creates the shop customers will visit. You can design the page after the catalog exists.</p>
       <Field label="Store name"><input v-model="form.name" :class="controlClass" required minlength="2" @blur="suggestSlug" /></Field>
-      <Field label="Store address" hint="Used in the public URL. Letters, numbers, and hyphens."><input v-model="form.slug" :class="controlClass" required /></Field>
+      <Field label="Store address" hint="Becomes the shop subdomain, such as this-name.localhost while you test."><input v-model="form.slug" :class="controlClass" required /></Field>
       <Field label="Description"><textarea v-model="form.description" :class="controlClass" rows="3" /></Field>
       <Button type="submit" :loading="creating">Create store</Button>
     </form>

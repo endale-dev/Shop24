@@ -59,7 +59,7 @@ async function toggle() {
 
 <template>
   <div class="max-w-2xl">
-    <PageHeader title="Store settings" subtitle="The public address stays available as a path, and as a subdomain when DNS allows it." />
+    <PageHeader title="Store settings" subtitle="Customers use the shop subdomain. This dashboard stays on the main domain." />
     <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
     <p v-if="message" class="mb-4 rounded-xl bg-lime-50 px-3 py-2 text-sm text-lime-900">{{ message }}</p>
     <form v-if="shop.shop" class="space-y-4 rounded-2xl border border-line bg-card p-5" @submit.prevent="save">
@@ -75,8 +75,8 @@ async function toggle() {
         </select>
       </Field>
       <div class="rounded-xl bg-paper p-3 text-sm text-stone-600">
-        <p>Path: {{ publicUrl(shop.shop.slug).path }}</p>
-        <p class="mt-1">Subdomain: {{ publicUrl(shop.shop.slug).subdomain }}</p>
+        <p>Shop: <a class="font-medium text-ink underline" :href="publicUrl(shop.shop.slug).subdomain" target="_blank" rel="noreferrer">{{ publicUrl(shop.shop.slug).subdomain }}</a></p>
+        <p class="mt-1">Same-host preview: <a class="font-medium text-ink underline" :href="publicUrl(shop.shop.slug).path" target="_blank" rel="noreferrer">{{ publicUrl(shop.shop.slug).path }}</a></p>
       </div>
       <div class="flex flex-wrap gap-2">
         <Button type="submit" :loading="loading">Save settings</Button>

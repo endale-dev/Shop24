@@ -59,7 +59,11 @@ func (s *AIBuilderService) run(ctx context.Context, ownerID, prompt string, refi
 		result, err = s.provider.Generate(ctx, prompt, storeCtx)
 	}
 	if err != nil {
-		return DesignResult{}, apperr.New(http.StatusBadGateway, "design_failed", "The designer could not update the storefront. Try again.")
+		message := "The designer could not update the storefront. Try again."
+		if detail := ai.SafeDetail(err); detail != "" {
+			message = detail
+		}
+		return DesignResult{}, apperr.New(http.StatusBadGateway, "design_failed", message)
 	}
 	cfg := storefront.Normalize(result.Config)
 	summary := result.Summary

@@ -29,16 +29,15 @@ export function storePaths(slug: string) {
   }
 }
 
+function hostWithPort(host: string) {
+  const port = window.location.port
+  return port ? `${host}:${port}` : host
+}
+
 export function publicUrl(slug: string) {
-  const origin = window.location.origin
-  if (baseDomain() === 'localhost') {
-    return {
-      path: `${origin}/s/${slug}`,
-      subdomain: `${window.location.protocol}//${slug}.localhost:${window.location.port || '5173'}`,
-    }
-  }
+  const protocol = window.location.protocol
   return {
-    path: `${origin}/s/${slug}`,
-    subdomain: `${window.location.protocol}//${slug}.${baseDomain()}`,
+    path: `${window.location.origin}/s/${slug}`,
+    subdomain: `${protocol}//${hostWithPort(`${slug}.${baseDomain()}`)}`,
   }
 }

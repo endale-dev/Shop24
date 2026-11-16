@@ -51,7 +51,7 @@ func Default(name, description string) models.StorefrontConfig {
 			Nav:              defaultNav(),
 		},
 		Sections: []models.Section{
-			heroSection(name, sub, "lg", true),
+			heroSection(name, sub, "md", true),
 			featuredSection(true),
 			gridSection(true),
 			categoriesSection(true),
@@ -207,6 +207,12 @@ func cleanSections(in []models.Section) []models.Section {
 	}
 	if !seen[SectionProductGrid] {
 		out = append(out, gridSection(true))
+	}
+	for _, kind := range []string{SectionFeatured, SectionCategories, SectionAbout, SectionAnnouncement, SectionNewsletter} {
+		if seen[kind] {
+			continue
+		}
+		out = append(out, cleanSection(models.Section{Type: kind, Visible: false}, kind))
 	}
 	if len(out) > 8 {
 		out = out[:8]

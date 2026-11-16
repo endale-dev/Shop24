@@ -14,8 +14,9 @@ const props = withDefaults(
     cartCount?: number
     interactive?: boolean
     showSections?: boolean
+    compact?: boolean
   }>(),
-  { collections: () => [], cartCount: 0, interactive: true, showSections: true },
+  { collections: () => [], cartCount: 0, interactive: true, showSections: true, compact: false },
 )
 
 const config = computed(() => props.store.storefront)
@@ -75,21 +76,30 @@ function ratioClass() {
 }
 
 function columnsClass(columns = 3) {
+  if (props.compact) return columns <= 2 ? 'grid-cols-1' : 'grid-cols-2'
   if (columns <= 2) return 'grid-cols-1 sm:grid-cols-2'
   if (columns >= 4) return 'grid-cols-2 lg:grid-cols-4'
   return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
 }
 
 function heroSize(size: string) {
+  if (props.compact) return 'py-10'
   if (size === 'sm') return 'py-12 md:py-16'
-  if (size === 'lg') return 'py-20 md:py-32'
-  return 'py-16 md:py-24'
+  if (size === 'lg') return 'py-16 md:py-28'
+  return 'py-14 md:py-20'
 }
 
 function heroType(size: string) {
-  if (size === 'sm') return 'text-4xl md:text-5xl'
-  if (size === 'lg') return 'text-5xl md:text-7xl'
-  return 'text-5xl md:text-6xl'
+  if (props.compact) return 'text-4xl'
+  if (size === 'sm') return 'text-4xl sm:text-5xl'
+  if (size === 'lg') return 'text-4xl sm:text-6xl md:text-7xl'
+  return 'text-4xl sm:text-5xl md:text-6xl'
+}
+
+function headerClass() {
+  if (props.compact) return 'flex-col items-center text-center'
+  if (config.value.header.alignment === 'center') return 'flex-col items-center text-center sm:flex-row sm:justify-center'
+  return 'flex-col items-start sm:flex-row sm:items-center sm:justify-between'
 }
 </script>
 
@@ -102,12 +112,12 @@ function heroType(size: string) {
     >
       {{ config.header.announcement }}
     </div>
-    <header class="sticky top-0 z-20 border-b backdrop-blur" :style="{ borderColor: 'var(--sf-border)', background: 'color-mix(in srgb, var(--sf-bg) 88%, transparent)' }">
-      <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-4" :class="config.header.alignment === 'center' ? 'justify-center text-center' : 'justify-between'">
-        <component :is="linkIs('home')" v-bind="linkAttrs('home')" class="font-semibold tracking-tight" :style="{ fontFamily: 'var(--sf-heading)', fontSize: '1.45rem' }">
+    <header class="sticky top-0 z-20 border-b backdrop-blur" :style="{ borderColor: 'var(--sf-border)', background: 'color-mix(in srgb, var(--sf-bg) 92%, transparent)' }">
+      <div class="mx-auto flex max-w-6xl gap-3 px-4 py-3 sm:gap-4 sm:py-4" :class="headerClass()">
+        <component :is="linkIs('home')" v-bind="linkAttrs('home')" class="max-w-full truncate text-2xl font-semibold leading-none tracking-tight sm:text-[1.65rem]" :style="{ fontFamily: 'var(--sf-heading)' }">
           {{ store.name }}
         </component>
-        <nav class="flex flex-wrap items-center gap-4 text-sm" :style="{ color: 'var(--sf-muted)' }">
+        <nav class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" :style="{ color: 'var(--sf-muted)' }">
           <component :is="linkIs(item.target)" v-for="item in config.header.nav" :key="item.target" v-bind="linkAttrs(item.target)" class="hover:opacity-70">
             {{ item.label }}
             <span v-if="item.target === 'cart'"> ({{ cartCount }})</span>
@@ -117,9 +127,9 @@ function heroType(size: string) {
     </header>
 
     <main v-if="showSections">
-      <section v-if="collections.length" class="mx-auto max-w-6xl px-4 pt-10">
-        <h2 class="mb-4 text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">Collections</h2>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section v-if="collections.length" class="mx-auto max-w-6xl px-4 pt-8 sm:pt-10">
+        <h2 class="mb-4 text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">Collections</h2>
+        <div class="grid gap-4" :class="compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'">
           <component :is="interactive ? RouterLink : 'div'" v-for="item in collections" :key="item.id" :to="paths.collection(item.slug)" class="group block">
             <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
               <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" class="aspect-[4/3] w-full object-cover" />
@@ -131,11 +141,11 @@ function heroType(size: string) {
       </section>
       <template v-for="section in config.sections" :key="section.id">
         <section v-if="section.visible && section.type === 'hero' && section.hero" :class="heroSize(section.hero.size)">
-          <div class="mx-auto grid max-w-6xl items-center gap-8 px-4" :class="section.hero.imageUrl ? 'md:grid-cols-2' : ''">
+          <div class="mx-auto grid max-w-6xl items-center gap-8 px-4" :class="section.hero.imageUrl && !compact ? 'md:grid-cols-2' : ''">
             <div :class="section.hero.align === 'center' && !section.hero.imageUrl ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl'">
               <p v-if="section.hero.eyebrow" class="mb-3 text-xs uppercase tracking-[0.22em]" :style="{ color: 'var(--sf-accent)' }">{{ section.hero.eyebrow }}</p>
               <h1 class="leading-[0.95]" :class="heroType(section.hero.size)" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.hero.headline }}</h1>
-              <p v-if="section.hero.subheadline" class="mt-4 text-base md:text-lg" :style="{ color: 'var(--sf-muted)' }">{{ section.hero.subheadline }}</p>
+              <p v-if="section.hero.subheadline" class="mt-4 max-w-xl text-base leading-relaxed sm:text-lg" :style="{ color: 'var(--sf-muted)' }">{{ section.hero.subheadline }}</p>
               <component
                 :is="linkIs(section.hero.ctaTarget)"
                 v-bind="linkAttrs(section.hero.ctaTarget)"
@@ -155,7 +165,7 @@ function heroType(size: string) {
 
         <section v-else-if="section.visible && (section.type === 'featured_products' || section.type === 'product_grid')" :id="section.type === 'product_grid' ? 'products' : undefined" class="mx-auto max-w-6xl px-4 py-12">
           <div class="mb-6 flex items-end justify-between gap-4">
-            <h2 class="text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">
+            <h2 class="text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">
               {{ section.type === 'featured_products' ? section.featured?.title : section.productGrid?.title }}
             </h2>
           </div>
@@ -174,7 +184,7 @@ function heroType(size: string) {
                 <img v-if="product.images[0]" :src="product.images[0]" :alt="product.name" class="w-full object-cover transition duration-300 group-hover:scale-[1.02]" :class="ratioClass()" />
                 <div v-else class="grid place-items-center text-3xl" :class="ratioClass()" :style="{ color: 'var(--sf-muted)', fontFamily: 'var(--sf-heading)' }">{{ product.name.slice(0, 1) }}</div>
               </div>
-              <div class="mt-3 flex items-start justify-between gap-3">
+              <div class="mt-3 flex flex-col gap-1" :class="compact ? '' : 'sm:flex-row sm:items-start sm:justify-between sm:gap-3'">
                 <div>
                   <h3 class="text-base font-medium">{{ product.name }}</h3>
                   <p v-if="product.category" class="text-xs" :style="{ color: 'var(--sf-muted)' }">{{ product.category }}</p>
@@ -194,16 +204,16 @@ function heroType(size: string) {
           </div>
         </section>
 
-        <section v-else-if="section.visible && section.type === 'about' && section.about" id="about" class="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2">
+        <section v-else-if="section.visible && section.type === 'about' && section.about" id="about" class="mx-auto grid max-w-6xl gap-8 px-4 py-12" :class="compact ? '' : 'md:grid-cols-2'">
           <div>
-            <h2 class="text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.about.title }}</h2>
+            <h2 class="text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.about.title }}</h2>
             <p class="mt-4 whitespace-pre-line leading-relaxed" :style="{ color: 'var(--sf-muted)' }">{{ section.about.body }}</p>
           </div>
           <img v-if="section.about.imageUrl" :src="section.about.imageUrl" alt="" class="aspect-[4/3] w-full object-cover" :style="{ borderRadius: 'var(--sf-radius)' }" />
         </section>
 
         <section v-else-if="section.visible && section.type === 'newsletter' && section.newsletter" class="mx-auto max-w-3xl px-4 py-14 text-center">
-          <h2 class="text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.newsletter.title }}</h2>
+          <h2 class="text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.newsletter.title }}</h2>
           <p class="mt-3" :style="{ color: 'var(--sf-muted)' }">{{ section.newsletter.text }}</p>
         </section>
       </template>
@@ -213,7 +223,7 @@ function heroType(size: string) {
     <footer class="mt-8 border-t" :style="{ borderColor: 'var(--sf-border)' }">
       <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm" :style="{ color: 'var(--sf-muted)' }">
         <p>{{ config.footer.text }}</p>
-        <div class="flex gap-4">
+        <div class="flex flex-wrap gap-x-4 gap-y-2">
           <component :is="linkIs(item.target)" v-for="item in config.footer.links" :key="item.target" v-bind="linkAttrs(item.target)">{{ item.label }}</component>
         </div>
       </div>
