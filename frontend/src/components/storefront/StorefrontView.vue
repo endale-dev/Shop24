@@ -2,18 +2,20 @@
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { formatMoney } from '@/features/money'
-import type { Product, PublicStore, Section, StorefrontConfig } from '@/types'
+import { priceVaries } from '@/features/products/api'
+import type { Collection, Product, PublicStore, Section } from '@/types'
 
 const props = withDefaults(
   defineProps<{
     store: PublicStore
     products: Product[]
-    paths: { home: string; cart: string; checkout: string; product: (id: string) => string }
+    collections?: Collection[]
+    paths: { home: string; cart: string; checkout: string; product: (id: string) => string; collection: (slug: string) => string }
     cartCount?: number
     interactive?: boolean
     showSections?: boolean
   }>(),
-  { cartCount: 0, interactive: true, showSections: true },
+  { collections: () => [], cartCount: 0, interactive: true, showSections: true },
 )
 
 const config = computed(() => props.store.storefront)
@@ -46,6 +48,18 @@ function hrefFor(target: string) {
   if (target === 'home') return props.paths.home
   if (target === 'about') return `${props.paths.home}#about`
   return `${props.paths.home}#products`
+}
+
+function linkIs(target: string) {
+  if (!props.interactive) return 'span'
+  if (target === 'cart') return RouterLink
+  return 'a'
+}
+
+function linkAttrs(target: string) {
+  if (!props.interactive) return {}
+  const href = hrefFor(target)
+  return target === 'cart' ? { to: href } : { href }
 }
 
 function productsFor(section: Section) {
@@ -90,21 +104,31 @@ function heroType(size: string) {
     </div>
     <header class="sticky top-0 z-20 border-b backdrop-blur" :style="{ borderColor: 'var(--sf-border)', background: 'color-mix(in srgb, var(--sf-bg) 88%, transparent)' }">
       <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-4" :class="config.header.alignment === 'center' ? 'justify-center text-center' : 'justify-between'">
-        <component :is="interactive ? RouterLink : 'span'" :to="paths.home" class="font-semibold tracking-tight" :style="{ fontFamily: 'var(--sf-heading)', fontSize: '1.45rem' }">
+        <component :is="linkIs('home')" v-bind="linkAttrs('home')" class="font-semibold tracking-tight" :style="{ fontFamily: 'var(--sf-heading)', fontSize: '1.45rem' }">
           {{ store.name }}
         </component>
         <nav class="flex flex-wrap items-center gap-4 text-sm" :style="{ color: 'var(--sf-muted)' }">
-          <template v-for="item in config.header.nav" :key="item.target">
-            <component :is="interactive ? RouterLink : 'span'" :to="hrefFor(item.target)" class="hover:opacity-70">
-              {{ item.label }}
-              <span v-if="item.target === 'cart'"> ({{ cartCount }})</span>
-            </component>
-          </template>
+          <component :is="linkIs(item.target)" v-for="item in config.header.nav" :key="item.target" v-bind="linkAttrs(item.target)" class="hover:opacity-70">
+            {{ item.label }}
+            <span v-if="item.target === 'cart'"> ({{ cartCount }})</span>
+          </component>
         </nav>
       </div>
     </header>
 
     <main v-if="showSections">
+      <section v-if="collections.length" class="mx-auto max-w-6xl px-4 pt-10">
+        <h2 class="mb-4 text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">Collections</h2>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <component :is="interactive ? RouterLink : 'div'" v-for="item in collections" :key="item.id" :to="paths.collection(item.slug)" class="group block">
+            <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
+              <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" class="aspect-[4/3] w-full object-cover" />
+              <div v-else class="grid aspect-[4/3] place-items-center text-3xl" :style="{ fontFamily: 'var(--sf-heading)', color: 'var(--sf-muted)' }">{{ item.name.slice(0, 1) }}</div>
+            </div>
+            <h3 class="mt-3 text-base font-medium">{{ item.name }}</h3>
+          </component>
+        </div>
+      </section>
       <template v-for="section in config.sections" :key="section.id">
         <section v-if="section.visible && section.type === 'hero' && section.hero" :class="heroSize(section.hero.size)">
           <div class="mx-auto grid max-w-6xl items-center gap-8 px-4" :class="section.hero.imageUrl ? 'md:grid-cols-2' : ''">
@@ -113,8 +137,8 @@ function heroType(size: string) {
               <h1 class="leading-[0.95]" :class="heroType(section.hero.size)" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.hero.headline }}</h1>
               <p v-if="section.hero.subheadline" class="mt-4 text-base md:text-lg" :style="{ color: 'var(--sf-muted)' }">{{ section.hero.subheadline }}</p>
               <component
-                :is="interactive ? RouterLink : 'span'"
-                :to="hrefFor(section.hero.ctaTarget)"
+                :is="linkIs(section.hero.ctaTarget)"
+                v-bind="linkAttrs(section.hero.ctaTarget)"
                 class="mt-6 inline-flex px-5 py-2.5 text-sm font-semibold"
                 :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }"
               >
@@ -155,7 +179,7 @@ function heroType(size: string) {
                   <h3 class="text-base font-medium">{{ product.name }}</h3>
                   <p v-if="product.category" class="text-xs" :style="{ color: 'var(--sf-muted)' }">{{ product.category }}</p>
                 </div>
-                <p class="text-sm">{{ formatMoney(product.priceCents, store.currency) }}</p>
+                <p class="text-sm">{{ priceVaries(product) ? 'From ' : '' }}{{ formatMoney(product.priceCents, store.currency) }}</p>
               </div>
             </component>
           </div>
@@ -190,7 +214,7 @@ function heroType(size: string) {
       <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm" :style="{ color: 'var(--sf-muted)' }">
         <p>{{ config.footer.text }}</p>
         <div class="flex gap-4">
-          <component :is="interactive ? RouterLink : 'span'" v-for="item in config.footer.links" :key="item.target" :to="hrefFor(item.target)">{{ item.label }}</component>
+          <component :is="linkIs(item.target)" v-for="item in config.footer.links" :key="item.target" v-bind="linkAttrs(item.target)">{{ item.label }}</component>
         </div>
       </div>
     </footer>

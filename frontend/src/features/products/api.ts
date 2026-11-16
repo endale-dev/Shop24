@@ -1,23 +1,32 @@
 import { request } from '@/services/api'
-import type { Product } from '@/types'
+import type { Product, VariantOption } from '@/types'
 
 export type ProductInput = {
   name: string
   description: string
-  priceCents: number
   images: string[]
   category: string
-  sku: string
-  stock: number
+  optionNames: string[]
+  variants: {
+    id: string
+    options: VariantOption[]
+    sku: string
+    priceCents: number
+    stock: number
+    imageUrl: string
+  }[]
   published: boolean
 }
 
-export function listProducts(params: { q?: string; status?: string; category?: string; lowStock?: boolean } = {}) {
+export function priceVaries(product: Product) {
+  const prices = new Set((product.variants ?? []).map((variant) => variant.priceCents))
+  return prices.size > 1
+}
+
+export function listProducts(params: { q?: string; status?: string } = {}) {
   const query = new URLSearchParams()
   if (params.q) query.set('q', params.q)
   if (params.status) query.set('status', params.status)
-  if (params.category) query.set('category', params.category)
-  if (params.lowStock) query.set('lowStock', '1')
   const suffix = query.toString() ? `?${query}` : ''
   return request<{ items: Product[] }>(`/api/products${suffix}`)
 }
@@ -38,6 +47,6 @@ export function deleteProduct(id: string) {
   return request<void>(`/api/products/${id}`, { method: 'DELETE' })
 }
 
-export function setStock(id: string, stock: number) {
-  return request<Product>(`/api/products/${id}/stock`, { method: 'POST', body: JSON.stringify({ stock }) })
+export function setStock(id: string, variantId: string, stock: number) {
+  return request<Product>(`/api/products/${id}/stock`, { method: 'POST', body: JSON.stringify({ stock, variantId }) })
 }

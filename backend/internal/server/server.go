@@ -16,17 +16,18 @@ import (
 )
 
 type App struct {
-	Config     config.Config
-	Log        *slog.Logger
-	Tokens     *token.Issuer
-	Auth       *handlers.AuthHandler
-	Stores     *handlers.StoreHandler
-	Products   *handlers.ProductHandler
-	Orders     *handlers.OrderHandler
-	Analytics  *handlers.AnalyticsHandler
-	Storefront *handlers.StorefrontHandler
-	Public     *handlers.PublicHandler
-	Health     func(context.Context) error
+	Config      config.Config
+	Log         *slog.Logger
+	Tokens      *token.Issuer
+	Auth        *handlers.AuthHandler
+	Stores      *handlers.StoreHandler
+	Products    *handlers.ProductHandler
+	Collections *handlers.CollectionHandler
+	Orders      *handlers.OrderHandler
+	Analytics   *handlers.AnalyticsHandler
+	Storefront  *handlers.StorefrontHandler
+	Public      *handlers.PublicHandler
+	Health      func(context.Context) error
 }
 
 type Server struct {
@@ -67,6 +68,12 @@ func New(app App) *Server {
 	mux.Handle("DELETE /api/products/{id}", auth(http.HandlerFunc(app.Products.Delete)))
 	mux.Handle("POST /api/products/{id}/stock", auth(http.HandlerFunc(app.Products.SetStock)))
 
+	mux.Handle("GET /api/collections", auth(http.HandlerFunc(app.Collections.List)))
+	mux.Handle("POST /api/collections", auth(http.HandlerFunc(app.Collections.Create)))
+	mux.Handle("GET /api/collections/{id}", auth(http.HandlerFunc(app.Collections.Get)))
+	mux.Handle("PATCH /api/collections/{id}", auth(http.HandlerFunc(app.Collections.Update)))
+	mux.Handle("DELETE /api/collections/{id}", auth(http.HandlerFunc(app.Collections.Delete)))
+
 	mux.Handle("GET /api/orders", auth(http.HandlerFunc(app.Orders.List)))
 	mux.Handle("GET /api/orders/{id}", auth(http.HandlerFunc(app.Orders.Get)))
 	mux.Handle("PATCH /api/orders/{id}", auth(http.HandlerFunc(app.Orders.UpdateStatus)))
@@ -78,10 +85,11 @@ func New(app App) *Server {
 	mux.Handle("PUT /api/storefront", auth(http.HandlerFunc(app.Storefront.Save)))
 	mux.Handle("POST /api/storefront/publish", auth(http.HandlerFunc(app.Storefront.Publish)))
 
-	mux.HandleFunc("GET /api/public/host", app.Public.Host)
 	mux.HandleFunc("GET /api/public/stores/{slug}", app.Public.Store)
 	mux.HandleFunc("GET /api/public/stores/{slug}/products", app.Public.Products)
 	mux.HandleFunc("GET /api/public/stores/{slug}/products/{id}", app.Public.Product)
+	mux.HandleFunc("GET /api/public/stores/{slug}/collections", app.Public.Collections)
+	mux.HandleFunc("GET /api/public/stores/{slug}/collections/{collectionSlug}", app.Public.Collection)
 	mux.HandleFunc("POST /api/public/stores/{slug}/orders", app.Public.PlaceOrder)
 
 	handler := middleware.Recover(app.Log)(middleware.RequestID(middleware.Log(app.Log)(middleware.CORS(app.Config.CORSOrigins, app.Config.BaseDomain)(mux))))

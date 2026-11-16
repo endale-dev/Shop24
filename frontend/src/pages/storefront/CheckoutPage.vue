@@ -18,7 +18,7 @@ async function submit() {
   try {
     order.value = await placeOrder(ctx.slug.value, {
       customer: form.value,
-      items: ctx.cart.value.lines.value.map((line) => ({ productId: line.productId, quantity: line.quantity, unitPriceCents: line.priceCents })),
+      items: ctx.cart.value.lines.value.map((line) => ({ productId: line.productId, variantId: line.variantId || '', quantity: line.quantity, unitPriceCents: line.priceCents })),
     })
     ctx.cart.value.clear()
   } catch (err) {
@@ -53,8 +53,8 @@ async function submit() {
         <h2 class="text-2xl" :style="{ fontFamily: 'var(--sf-heading)' }">Your bag</h2>
         <p v-if="ctx.cart.value.lines.value.length === 0" class="mt-3 text-sm">Add a product before checking out.</p>
         <ul v-else class="mt-4 space-y-2 text-sm">
-          <li v-for="line in ctx.cart.value.lines.value" :key="line.productId" class="flex justify-between gap-3">
-            <span>{{ line.quantity }} × {{ line.name }}</span>
+          <li v-for="line in ctx.cart.value.lines.value" :key="`${line.productId}:${line.variantId || ''}`" class="flex justify-between gap-3">
+            <span>{{ line.quantity }} × {{ line.name }}<span v-if="line.optionLabel"> ({{ line.optionLabel }})</span></span>
             <span>{{ formatMoney(line.priceCents * line.quantity, ctx.store.value.currency) }}</span>
           </li>
         </ul>

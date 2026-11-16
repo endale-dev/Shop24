@@ -9,12 +9,15 @@ import BuilderPage from '@/pages/dashboard/BuilderPage.vue'
 import OrderDetailPage from '@/pages/dashboard/OrderDetailPage.vue'
 import OrdersPage from '@/pages/dashboard/OrdersPage.vue'
 import OverviewPage from '@/pages/dashboard/OverviewPage.vue'
+import CollectionFormPage from '@/pages/dashboard/CollectionFormPage.vue'
+import CollectionsPage from '@/pages/dashboard/CollectionsPage.vue'
 import ProductFormPage from '@/pages/dashboard/ProductFormPage.vue'
 import ProductsPage from '@/pages/dashboard/ProductsPage.vue'
 import SettingsPage from '@/pages/dashboard/SettingsPage.vue'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 import CartPage from '@/pages/storefront/CartPage.vue'
 import CheckoutPage from '@/pages/storefront/CheckoutPage.vue'
+import CollectionPage from '@/pages/storefront/CollectionPage.vue'
 import ProductPage from '@/pages/storefront/ProductPage.vue'
 import StoreHomePage from '@/pages/storefront/StoreHomePage.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +25,7 @@ import { useShopStore } from '@/stores/shop'
 
 const storefrontChildren = [
   { path: '', name: 'store-home', component: StoreHomePage },
+  { path: 'c/:collectionSlug', name: 'store-collection', component: CollectionPage },
   { path: 'p/:productId', name: 'store-product', component: ProductPage },
   { path: 'cart', name: 'store-cart', component: CartPage },
   { path: 'checkout', name: 'store-checkout', component: CheckoutPage },
@@ -39,6 +43,9 @@ const dashboardRoutes = [
       { path: 'products', component: ProductsPage, meta: { store: true } },
       { path: 'products/new', component: ProductFormPage, meta: { store: true } },
       { path: 'products/:id', component: ProductFormPage, meta: { store: true } },
+      { path: 'collections', component: CollectionsPage, meta: { store: true } },
+      { path: 'collections/new', component: CollectionFormPage, meta: { store: true } },
+      { path: 'collections/:id', component: CollectionFormPage, meta: { store: true } },
       { path: 'orders', component: OrdersPage, meta: { store: true } },
       { path: 'orders/:id', component: OrderDetailPage, meta: { store: true } },
       { path: 'builder', component: BuilderPage, meta: { store: true } },

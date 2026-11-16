@@ -14,6 +14,6 @@ export function updateOrderStatus(id: string, status: string) {
   return request<Order>(`/api/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
 }
 
-export function placeOrder(slug: string, body: { customer: Customer; items: { productId: string; quantity: number; unitPriceCents: number }[] }) {
+export function placeOrder(slug: string, body: { customer: Customer; items: { productId: string; variantId: string; quantity: number; unitPriceCents: number }[] }) {
   return request<Order>(`/api/public/stores/${slug}/orders`, { method: 'POST', body: JSON.stringify(body) })
 }

@@ -4,11 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"shop24/internal/apperr"
 	"shop24/internal/domain/models"
 	"shop24/internal/httpx"
 	"shop24/internal/services"
-	"shop24/internal/storehost"
 )
 
 type StorefrontHandler struct {
@@ -91,24 +89,15 @@ func (h *StorefrontHandler) Publish(w http.ResponseWriter, r *http.Request) {
 }
 
 type PublicHandler struct {
-	stores   *services.StoreService
-	products *services.ProductService
-	orders   *services.OrderService
-	log      *slog.Logger
-	base     string
+	stores      *services.StoreService
+	products    *services.ProductService
+	orders      *services.OrderService
+	collections *services.CollectionService
+	log         *slog.Logger
 }
 
-func NewPublicHandler(stores *services.StoreService, products *services.ProductService, orders *services.OrderService, log *slog.Logger, baseDomain string) *PublicHandler {
-	return &PublicHandler{stores: stores, products: products, orders: orders, log: log, base: baseDomain}
-}
-
-func (h *PublicHandler) Host(w http.ResponseWriter, r *http.Request) {
-	slug := storehost.SlugFromHost(r.Host, h.base)
-	if slug == "" {
-		fail(h.log, w, apperr.ErrNotFound)
-		return
-	}
-	httpx.Data(w, http.StatusOK, map[string]string{"slug": slug})
+func NewPublicHandler(stores *services.StoreService, products *services.ProductService, orders *services.OrderService, collections *services.CollectionService, log *slog.Logger) *PublicHandler {
+	return &PublicHandler{stores: stores, products: products, orders: orders, collections: collections, log: log}
 }
 
 func (h *PublicHandler) Store(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +132,7 @@ func (h *PublicHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 		Customer models.Customer `json:"customer"`
 		Items    []struct {
 			ProductID      string `json:"productId"`
+			VariantID      string `json:"variantId"`
 			Quantity       int    `json:"quantity"`
 			UnitPriceCents int64  `json:"unitPriceCents"`
 		} `json:"items"`
@@ -153,7 +143,7 @@ func (h *PublicHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]services.ItemInput, 0, len(body.Items))
 	for _, item := range body.Items {
-		items = append(items, services.ItemInput{ProductID: item.ProductID, Quantity: item.Quantity, UnitPriceCents: item.UnitPriceCents})
+		items = append(items, services.ItemInput{ProductID: item.ProductID, VariantID: item.VariantID, Quantity: item.Quantity, UnitPriceCents: item.UnitPriceCents})
 	}
 	order, err := h.orders.Place(r.Context(), r.PathValue("slug"), services.PlaceOrderInput{Customer: body.Customer, Items: items})
 	if err != nil {
@@ -161,4 +151,22 @@ func (h *PublicHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.Data(w, http.StatusCreated, order)
+}
+
+func (h *PublicHandler) Collections(w http.ResponseWriter, r *http.Request) {
+	items, err := h.collections.PublicList(r.Context(), r.PathValue("slug"))
+	if err != nil {
+		fail(h.log, w, err)
+		return
+	}
+	httpx.Data(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h *PublicHandler) Collection(w http.ResponseWriter, r *http.Request) {
+	collection, products, store, err := h.collections.PublicGet(r.Context(), r.PathValue("slug"), r.PathValue("collectionSlug"))
+	if err != nil {
+		fail(h.log, w, err)
+		return
+	}
+	httpx.Data(w, http.StatusOK, map[string]any{"collection": collection, "products": products, "store": store})
 }

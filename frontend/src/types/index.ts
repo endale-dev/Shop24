@@ -87,6 +87,17 @@ export type PublicStore = {
   storefront: StorefrontConfig
 }
 
+export type VariantOption = { name: string; value: string }
+
+export type Variant = {
+  id: string
+  options: VariantOption[]
+  sku: string
+  priceCents: number
+  stock: number
+  imageUrl: string
+}
+
 export type Product = {
   id: string
   storeId: string
@@ -95,9 +106,24 @@ export type Product = {
   priceCents: number
   images: string[]
   category: string
+  optionNames: string[]
+  variants: Variant[]
   sku: string
   stock: number
   lowStock: boolean
+  published: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type Collection = {
+  id: string
+  storeId: string
+  name: string
+  slug: string
+  description: string
+  imageUrl: string
+  productIds: string[]
   published: boolean
   createdAt: string
   updatedAt: string
@@ -107,7 +133,9 @@ export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | '
 
 export type OrderItem = {
   productId: string
+  variantId: string
   name: string
+  optionLabel: string
   sku: string
   unitPriceCents: number
   quantity: number

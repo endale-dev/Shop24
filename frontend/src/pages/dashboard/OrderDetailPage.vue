@@ -51,7 +51,7 @@ async function save() {
           <thead class="text-xs uppercase tracking-wide text-stone-500"><tr><th class="py-2">Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
           <tbody>
             <tr v-for="item in order.items" :key="item.productId + item.sku" class="border-t border-line">
-              <td class="py-3">{{ item.name }}<span class="block text-xs text-stone-500">{{ item.sku }}</span></td>
+              <td class="py-3">{{ item.name }}<span v-if="item.optionLabel" class="block text-xs text-stone-500">{{ item.optionLabel }}</span><span class="block text-xs text-stone-500">{{ item.sku }}</span></td>
               <td>{{ item.quantity }}</td>
               <td>{{ formatMoney(item.unitPriceCents, shop.shop?.currency) }}</td>
               <td>{{ formatMoney(item.lineTotalCents, shop.shop?.currency) }}</td>

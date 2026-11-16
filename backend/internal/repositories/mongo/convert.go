@@ -40,6 +40,8 @@ func duplicateField(err error) string {
 		return "sku"
 	case strings.Contains(message, "ownerId"):
 		return "ownerId"
+	case strings.Contains(message, "collection_slug"):
+		return "collection_slug"
 	case strings.Contains(message, "slug"):
 		return "slug"
 	case strings.Contains(message, "email"):
@@ -82,6 +84,20 @@ func (d userDoc) model() models.User {
 	}
 }
 
+type variantOptionDoc struct {
+	Name  string `bson:"name"`
+	Value string `bson:"value"`
+}
+
+type variantDoc struct {
+	ID         string             `bson:"id"`
+	Options    []variantOptionDoc `bson:"options"`
+	SKU        string             `bson:"sku"`
+	PriceCents int64              `bson:"priceCents"`
+	Stock      int                `bson:"stock"`
+	ImageURL   string             `bson:"imageUrl"`
+}
+
 type productDoc struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty"`
 	StoreID     string             `bson:"storeId"`
@@ -90,6 +106,8 @@ type productDoc struct {
 	PriceCents  int64              `bson:"priceCents"`
 	Images      []string           `bson:"images"`
 	Category    string             `bson:"category"`
+	OptionNames []string           `bson:"optionNames"`
+	Variants    []variantDoc       `bson:"variants"`
 	SKU         string             `bson:"sku"`
 	Stock       int                `bson:"stock"`
 	Published   bool               `bson:"published"`
@@ -97,14 +115,55 @@ type productDoc struct {
 	UpdatedAt   time.Time          `bson:"updatedAt"`
 }
 
+func variantDocs(variants []models.Variant) []variantDoc {
+	if variants == nil {
+		return []variantDoc{}
+	}
+	out := make([]variantDoc, 0, len(variants))
+	for _, variant := range variants {
+		options := make([]variantOptionDoc, 0, len(variant.Options))
+		for _, option := range variant.Options {
+			options = append(options, variantOptionDoc{Name: option.Name, Value: option.Value})
+		}
+		out = append(out, variantDoc{
+			ID: variant.ID, Options: options, SKU: variant.SKU,
+			PriceCents: variant.PriceCents, Stock: variant.Stock, ImageURL: variant.ImageURL,
+		})
+	}
+	return out
+}
+
+func variantModels(docs []variantDoc) []models.Variant {
+	if docs == nil {
+		return nil
+	}
+	out := make([]models.Variant, 0, len(docs))
+	for _, doc := range docs {
+		options := make([]models.VariantOption, 0, len(doc.Options))
+		for _, option := range doc.Options {
+			options = append(options, models.VariantOption{Name: option.Name, Value: option.Value})
+		}
+		out = append(out, models.Variant{
+			ID: doc.ID, Options: options, SKU: doc.SKU,
+			PriceCents: doc.PriceCents, Stock: doc.Stock, ImageURL: doc.ImageURL,
+		})
+	}
+	return out
+}
+
 func newProductDoc(product models.Product) productDoc {
 	images := product.Images
 	if images == nil {
 		images = []string{}
 	}
+	names := product.OptionNames
+	if names == nil {
+		names = []string{}
+	}
 	return productDoc{
 		StoreID: product.StoreID, Name: product.Name, Description: product.Description,
 		PriceCents: product.PriceCents, Images: images, Category: product.Category,
+		OptionNames: names, Variants: variantDocs(product.Variants),
 		SKU: product.SKU, Stock: product.Stock, Published: product.Published,
 		CreatedAt: utc(product.CreatedAt), UpdatedAt: utc(product.UpdatedAt),
 	}
@@ -115,16 +174,23 @@ func (d productDoc) model() models.Product {
 	if images == nil {
 		images = []string{}
 	}
+	names := d.OptionNames
+	if names == nil {
+		names = []string{}
+	}
 	return models.Product{
 		ID: d.ID.Hex(), StoreID: d.StoreID, Name: d.Name, Description: d.Description,
-		PriceCents: d.PriceCents, Images: images, Category: d.Category, SKU: d.SKU,
-		Stock: d.Stock, Published: d.Published, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt,
+		PriceCents: d.PriceCents, Images: images, Category: d.Category,
+		OptionNames: names, Variants: variantModels(d.Variants),
+		SKU: d.SKU, Stock: d.Stock, Published: d.Published, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt,
 	}
 }
 
 type orderItemDoc struct {
 	ProductID      string `bson:"productId"`
+	VariantID      string `bson:"variantId"`
 	Name           string `bson:"name"`
+	OptionLabel    string `bson:"optionLabel"`
 	SKU            string `bson:"sku"`
 	UnitPriceCents int64  `bson:"unitPriceCents"`
 	Quantity       int    `bson:"quantity"`
@@ -157,7 +223,7 @@ func newOrderDoc(order models.Order) orderDoc {
 	items := make([]orderItemDoc, 0, len(order.Items))
 	for _, item := range order.Items {
 		items = append(items, orderItemDoc{
-			ProductID: item.ProductID, Name: item.Name, SKU: item.SKU,
+			ProductID: item.ProductID, VariantID: item.VariantID, Name: item.Name, OptionLabel: item.OptionLabel, SKU: item.SKU,
 			UnitPriceCents: item.UnitPriceCents, Quantity: item.Quantity, LineTotalCents: item.LineTotalCents,
 		})
 	}
@@ -176,7 +242,7 @@ func (d orderDoc) model() models.Order {
 	items := make([]models.OrderItem, 0, len(d.Items))
 	for _, item := range d.Items {
 		items = append(items, models.OrderItem{
-			ProductID: item.ProductID, Name: item.Name, SKU: item.SKU,
+			ProductID: item.ProductID, VariantID: item.VariantID, Name: item.Name, OptionLabel: item.OptionLabel, SKU: item.SKU,
 			UnitPriceCents: item.UnitPriceCents, Quantity: item.Quantity, LineTotalCents: item.LineTotalCents,
 		})
 	}

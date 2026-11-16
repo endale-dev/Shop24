@@ -8,7 +8,7 @@ import Modal from '@/components/ui/Modal.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { controlClass } from '@/components/ui/control'
 import { formatMoney } from '@/features/money'
-import { deleteProduct, listProducts } from '@/features/products/api'
+import { deleteProduct, listProducts, priceVaries } from '@/features/products/api'
 import { useShopStore } from '@/stores/shop'
 import type { Product } from '@/types'
 
@@ -50,7 +50,7 @@ onMounted(load)
 <template>
   <div>
     <PageHeader title="Products" subtitle="Prices, photos, and the stock customers can buy.">
-      <RouterLink to="/products/new"><Button>New product</Button></RouterLink>
+      <Button to="/products/new">New product</Button>
     </PageHeader>
     <form class="mb-4 flex flex-wrap gap-2" @submit.prevent="load">
       <input v-model="query" :class="controlClass" class="max-w-xs" placeholder="Search name or SKU" />
@@ -64,7 +64,7 @@ onMounted(load)
     <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
     <p v-if="loading" class="text-sm text-stone-500">Loading products…</p>
     <EmptyState v-else-if="items.length === 0" title="No products yet" body="Add something you actually sell. Drafts stay off the public shop.">
-      <RouterLink to="/products/new"><Button>Add a product</Button></RouterLink>
+      <Button to="/products/new">Add a product</Button>
     </EmptyState>
     <div v-else class="overflow-hidden rounded-2xl border border-line bg-card">
       <table class="w-full text-left text-sm">
@@ -75,9 +75,9 @@ onMounted(load)
           <tr v-for="product in items" :key="product.id" class="border-b border-line last:border-0">
             <td class="px-4 py-3">
               <p class="font-medium">{{ product.name }}</p>
-              <p class="text-xs text-stone-500">{{ product.sku }}<span v-if="product.category"> · {{ product.category }}</span></p>
+              <p class="text-xs text-stone-500">{{ product.variants?.length > 1 ? `${product.variants.length} versions` : product.sku }}<span v-if="product.category"> · {{ product.category }}</span></p>
             </td>
-            <td class="px-4 py-3">{{ formatMoney(product.priceCents, shop.shop?.currency) }}</td>
+            <td class="px-4 py-3">{{ priceVaries(product) ? 'From ' : '' }}{{ formatMoney(product.priceCents, shop.shop?.currency) }}</td>
             <td class="px-4 py-3"><Badge :tone="product.stock === 0 ? 'bad' : product.lowStock ? 'warn' : 'good'">{{ product.stock }}</Badge></td>
             <td class="px-4 py-3">{{ product.published ? 'Published' : 'Draft' }}</td>
             <td class="px-4 py-3 text-right">

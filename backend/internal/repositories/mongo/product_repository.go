@@ -2,6 +2,7 @@ package mongorepo
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"time"
 
@@ -43,9 +44,14 @@ func (r *ProductRepository) Update(ctx context.Context, product models.Product) 
 	if images == nil {
 		images = []string{}
 	}
+	names := product.OptionNames
+	if names == nil {
+		names = []string{}
+	}
 	result, err := r.coll.UpdateOne(ctx, bson.M{"_id": oid, "storeId": product.StoreID}, bson.M{"$set": bson.M{
 		"name": product.Name, "description": product.Description, "priceCents": product.PriceCents,
-		"images": images, "category": product.Category, "sku": product.SKU,
+		"images": images, "category": product.Category, "sku": product.SKU, "stock": product.Stock,
+		"optionNames": names, "variants": variantDocs(product.Variants),
 		"published": product.Published, "updatedAt": utc(product.UpdatedAt),
 	}})
 	if err != nil {
@@ -87,21 +93,30 @@ func (r *ProductRepository) FindByID(ctx context.Context, storeID, id string) (m
 
 func (r *ProductRepository) List(ctx context.Context, storeID string, filter interfaces.ProductFilter) ([]models.Product, error) {
 	query := bson.M{"storeId": storeID}
-	if filter.Category != "" {
-		query["category"] = filter.Category
-	}
 	if filter.Published != nil {
 		query["published"] = *filter.Published
 	}
+	clauses := make([]bson.M, 0, 2)
 	if filter.LowStock {
-		query["stock"] = bson.M{"$lte": filter.LowStockAt}
+		clauses = append(clauses, bson.M{"$or": []bson.M{
+			{"variants": bson.M{"$elemMatch": bson.M{"stock": bson.M{"$lte": filter.LowStockAt}}}},
+			{"variants.0": bson.M{"$exists": false}, "stock": bson.M{"$lte": filter.LowStockAt}},
+		}})
 	}
 	if filter.Query != "" {
 		pattern := regexp.QuoteMeta(filter.Query)
-		query["$or"] = []bson.M{
+		clauses = append(clauses, bson.M{"$or": []bson.M{
 			{"name": bson.M{"$regex": pattern, "$options": "i"}},
 			{"sku": bson.M{"$regex": pattern, "$options": "i"}},
+			{"variants.sku": bson.M{"$regex": pattern, "$options": "i"}},
+		}})
+	}
+	if len(clauses) == 1 {
+		for key, value := range clauses[0] {
+			query[key] = value
 		}
+	} else if len(clauses) > 1 {
+		query["$and"] = clauses
 	}
 	cursor, err := r.coll.Find(ctx, query, options.Find().
 		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
@@ -121,18 +136,24 @@ func (r *ProductRepository) List(ctx context.Context, storeID string, filter int
 	return products, cursor.Err()
 }
 
-func (r *ProductRepository) AddStock(ctx context.Context, storeID, id string, delta int) error {
+func (r *ProductRepository) AddStock(ctx context.Context, storeID, id, variantID string, delta int) error {
 	oid, err := objectID(id)
 	if err != nil {
 		return err
 	}
-	filter := bson.M{"_id": oid, "storeId": storeID}
-	if delta < 0 {
-		filter["stock"] = bson.M{"$gte": -delta}
+	if variantID == "" {
+		variantID = id
 	}
-	result, err := r.coll.UpdateOne(ctx, filter, bson.M{
-		"$inc": bson.M{"stock": delta},
-		"$set": bson.M{"updatedAt": time.Now().UTC()},
+	now := time.Now().UTC()
+	match := bson.M{"id": variantID}
+	if delta < 0 {
+		match["stock"] = bson.M{"$gte": -delta}
+	}
+	result, err := r.coll.UpdateOne(ctx, bson.M{
+		"_id": oid, "storeId": storeID, "variants": bson.M{"$elemMatch": match},
+	}, bson.M{
+		"$inc": bson.M{"variants.$.stock": delta, "stock": delta},
+		"$set": bson.M{"updatedAt": now},
 	})
 	if err != nil {
 		return err
@@ -140,28 +161,106 @@ func (r *ProductRepository) AddStock(ctx context.Context, storeID, id string, de
 	if result.MatchedCount == 1 {
 		return nil
 	}
-	err = r.coll.FindOne(ctx, bson.M{"_id": oid, "storeId": storeID}).Err()
+	if variantID == id {
+		legacy := bson.M{"_id": oid, "storeId": storeID, "variants.0": bson.M{"$exists": false}}
+		if delta < 0 {
+			legacy["stock"] = bson.M{"$gte": -delta}
+		}
+		result, err = r.coll.UpdateOne(ctx, legacy, bson.M{
+			"$inc": bson.M{"stock": delta},
+			"$set": bson.M{"updatedAt": now},
+		})
+		if err != nil {
+			return err
+		}
+		if result.MatchedCount == 1 {
+			return nil
+		}
+	}
+	var doc productDoc
+	err = r.coll.FindOne(ctx, bson.M{"_id": oid, "storeId": storeID}).Decode(&doc)
 	if err != nil {
 		return mapErr(err)
 	}
-	return interfaces.ErrInsufficientStock
+	for _, variant := range doc.Variants {
+		if variant.ID == variantID {
+			return interfaces.ErrInsufficientStock
+		}
+	}
+	if len(doc.Variants) == 0 {
+		return interfaces.ErrInsufficientStock
+	}
+	return interfaces.ErrNotFound
 }
 
-func (r *ProductRepository) SetStock(ctx context.Context, storeID, id string, stock int, at time.Time) error {
+func (r *ProductRepository) SetStock(ctx context.Context, storeID, id, variantID string, stock int, at time.Time) error {
 	oid, err := objectID(id)
 	if err != nil {
 		return err
 	}
-	result, err := r.coll.UpdateOne(ctx, bson.M{"_id": oid, "storeId": storeID}, bson.M{"$set": bson.M{
-		"stock": stock, "updatedAt": utc(at),
-	}})
+	if variantID == "" {
+		variantID = id
+	}
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$set", Value: bson.M{
+			"variants": bson.M{"$map": bson.M{
+				"input": bson.M{"$ifNull": bson.A{"$variants", bson.A{}}},
+				"as":    "v",
+				"in": bson.M{"$cond": bson.A{
+					bson.M{"$eq": bson.A{"$$v.id", variantID}},
+					bson.M{"$mergeObjects": bson.A{"$$v", bson.M{"stock": stock}}},
+					"$$v",
+				}},
+			}},
+			"updatedAt": utc(at),
+		}}},
+		bson.D{{Key: "$set", Value: bson.M{"stock": bson.M{"$sum": "$variants.stock"}}}},
+	}
+	result, err := r.coll.UpdateOne(ctx, bson.M{"_id": oid, "storeId": storeID, "variants.id": variantID}, pipeline)
 	if err != nil {
 		return err
 	}
-	if result.MatchedCount == 0 {
-		return interfaces.ErrNotFound
+	if result.MatchedCount == 1 {
+		return nil
 	}
-	return nil
+	if variantID == id {
+		result, err = r.coll.UpdateOne(ctx, bson.M{
+			"_id": oid, "storeId": storeID, "variants.0": bson.M{"$exists": false},
+		}, bson.M{"$set": bson.M{"stock": stock, "updatedAt": utc(at)}})
+		if err != nil {
+			return err
+		}
+		if result.MatchedCount == 1 {
+			return nil
+		}
+	}
+	err = r.coll.FindOne(ctx, bson.M{"_id": oid, "storeId": storeID}).Err()
+	return mapErr(err)
+}
+
+func (r *ProductRepository) SKUInUse(ctx context.Context, storeID, sku, exceptProductID string) (bool, error) {
+	query := bson.M{
+		"storeId": storeID,
+		"$or": []bson.M{
+			{"sku": sku},
+			{"variants.sku": sku},
+		},
+	}
+	if exceptProductID != "" {
+		oid, err := objectID(exceptProductID)
+		if err != nil {
+			return false, err
+		}
+		query["_id"] = bson.M{"$ne": oid}
+	}
+	err := r.coll.FindOne(ctx, query).Err()
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(mapErr(err), interfaces.ErrNotFound) {
+		return false, nil
+	}
+	return false, err
 }
 
 func (r *ProductRepository) Totals(ctx context.Context, storeID string) (int, int, error) {

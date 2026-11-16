@@ -50,12 +50,14 @@ func main() {
 	users := mongorepo.NewUserRepository(db)
 	stores := mongorepo.NewStoreRepository(db)
 	products := mongorepo.NewProductRepository(db)
+	collections := mongorepo.NewCollectionRepository(db)
 	orders := mongorepo.NewOrderRepository(db)
 	issuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 
 	authService := services.NewAuthService(users, issuer)
 	storeService := services.NewStoreService(stores)
-	productService := services.NewProductService(stores, products)
+	productService := services.NewProductService(stores, products, collections)
+	collectionService := services.NewCollectionService(stores, products, collections)
 	orderService := services.NewOrderService(stores, products, orders)
 	analyticsService := services.NewAnalyticsService(stores, products, orders)
 	storefrontService := services.NewStorefrontService(stores)
@@ -76,17 +78,18 @@ func main() {
 	builder := services.NewAIBuilderService(stores, products, provider)
 
 	srv := server.New(server.App{
-		Config:     cfg,
-		Log:        log,
-		Tokens:     issuer,
-		Auth:       handlers.NewAuthHandler(authService, log, cfg.CookieSecure, cfg.CookieDomain),
-		Stores:     handlers.NewStoreHandler(storeService, log),
-		Products:   handlers.NewProductHandler(productService, log),
-		Orders:     handlers.NewOrderHandler(orderService, log),
-		Analytics:  handlers.NewAnalyticsHandler(analyticsService, log),
-		Storefront: handlers.NewStorefrontHandler(storefrontService, builder, log),
-		Public:     handlers.NewPublicHandler(storeService, productService, orderService, log, cfg.BaseDomain),
-		Health:     func(ctx context.Context) error { return client.Ping(ctx, nil) },
+		Config:      cfg,
+		Log:         log,
+		Tokens:      issuer,
+		Auth:        handlers.NewAuthHandler(authService, log, cfg.CookieSecure, cfg.CookieDomain),
+		Stores:      handlers.NewStoreHandler(storeService, log),
+		Products:    handlers.NewProductHandler(productService, log),
+		Collections: handlers.NewCollectionHandler(collectionService, log),
+		Orders:      handlers.NewOrderHandler(orderService, log),
+		Analytics:   handlers.NewAnalyticsHandler(analyticsService, log),
+		Storefront:  handlers.NewStorefrontHandler(storefrontService, builder, log),
+		Public:      handlers.NewPublicHandler(storeService, productService, orderService, collectionService, log),
+		Health:      func(ctx context.Context) error { return client.Ping(ctx, nil) },
 	})
 	if err := srv.Run(ctx); err != nil {
 		log.Error("server stopped", "error", err)

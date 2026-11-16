@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"shop24/internal/apperr"
@@ -24,6 +25,7 @@ func NewOrderService(stores interfaces.StoreRepository, products interfaces.Prod
 
 type ItemInput struct {
 	ProductID      string
+	VariantID      string
 	Quantity       int
 	UnitPriceCents int64
 }
@@ -59,33 +61,40 @@ func (s *OrderService) Place(ctx context.Context, slug string, in PlaceOrderInpu
 		if err != nil {
 			return models.Order{}, err
 		}
-		if item.UnitPriceCents != product.PriceCents {
-			return models.Order{}, apperr.New(http.StatusConflict, "price_changed", "The price of "+product.Name+" changed. Review the cart and try again.")
+		variant, err := pickVariant(product, item.VariantID)
+		if err != nil {
+			return models.Order{}, err
 		}
-		if product.Stock < item.Quantity {
-			return models.Order{}, apperr.New(http.StatusConflict, "insufficient_stock", "Not enough stock for "+product.Name)
+		label := variantDisplay(product.Name, variant)
+		if item.UnitPriceCents != variant.PriceCents {
+			return models.Order{}, apperr.New(http.StatusConflict, "price_changed", "The price of "+label+" changed. Review the cart and try again.")
 		}
-		line := product.PriceCents * int64(item.Quantity)
+		if variant.Stock < item.Quantity {
+			return models.Order{}, apperr.New(http.StatusConflict, "insufficient_stock", "Not enough stock for "+label)
+		}
+		line := variant.PriceCents * int64(item.Quantity)
 		subtotal += line
 		items = append(items, models.OrderItem{
-			ProductID: product.ID, Name: product.Name, SKU: product.SKU,
-			UnitPriceCents: product.PriceCents, Quantity: item.Quantity, LineTotalCents: line,
+			ProductID: product.ID, VariantID: variant.ID, Name: product.Name, OptionLabel: variant.Label(), SKU: variant.SKU,
+			UnitPriceCents: variant.PriceCents, Quantity: item.Quantity, LineTotalCents: line,
 		})
 	}
 
 	held := make([]ItemInput, 0, len(items))
 	for _, item := range items {
-		if err := s.products.AddStock(ctx, store.ID, item.ProductID, -item.Quantity); err != nil {
-			s.release(ctx, store.ID, held)
+		if err := s.products.AddStock(ctx, store.ID, item.ProductID, item.VariantID, -item.Quantity); err != nil {
+			relErr := s.release(ctx, store.ID, held)
 			if errors.Is(err, interfaces.ErrInsufficientStock) {
-				return models.Order{}, apperr.New(http.StatusConflict, "insufficient_stock", "Not enough stock for "+item.Name)
+				err = apperr.New(http.StatusConflict, "insufficient_stock", "Not enough stock for "+item.Name)
+			} else if errors.Is(err, interfaces.ErrNotFound) {
+				err = apperr.New(http.StatusConflict, "product_unavailable", "A product in this order is no longer available")
 			}
-			if errors.Is(err, interfaces.ErrNotFound) {
-				return models.Order{}, apperr.New(http.StatusConflict, "product_unavailable", "A product in this order is no longer available")
+			if relErr != nil {
+				err = errors.Join(err, relErr)
 			}
 			return models.Order{}, err
 		}
-		held = append(held, ItemInput{ProductID: item.ProductID, Quantity: item.Quantity})
+		held = append(held, ItemInput{ProductID: item.ProductID, VariantID: item.VariantID, Quantity: item.Quantity})
 	}
 
 	now := time.Now().UTC()
@@ -95,7 +104,9 @@ func (s *OrderService) Place(ctx context.Context, slug string, in PlaceOrderInpu
 		CreatedAt: now, UpdatedAt: now,
 	})
 	if err != nil {
-		s.release(ctx, store.ID, held)
+		if relErr := s.release(ctx, store.ID, held); relErr != nil {
+			err = errors.Join(err, relErr)
+		}
 		return models.Order{}, err
 	}
 	return created, nil
@@ -159,7 +170,9 @@ func (s *OrderService) UpdateStatus(ctx context.Context, ownerID, orderID string
 	}
 	updated, err := s.orders.UpdateStatus(ctx, store.ID, orderID, status, time.Now().UTC())
 	if err != nil && status == models.OrderCancelled {
-		_ = s.reserveAgain(ctx, store.ID, current.Items)
+		if undoErr := s.reserveAgain(ctx, store.ID, current.Items); undoErr != nil {
+			err = errors.Join(err, undoErr)
+		}
 	}
 	if errors.Is(err, interfaces.ErrConflict) {
 		return models.Order{}, apperr.New(http.StatusConflict, "order_closed", "Cancelled orders cannot change status")
@@ -172,12 +185,14 @@ func (s *OrderService) restore(ctx context.Context, storeID string, items []mode
 	defer cancel()
 	restored := make([]models.OrderItem, 0, len(items))
 	for _, item := range items {
-		err := s.products.AddStock(ctx, storeID, item.ProductID, item.Quantity)
+		err := s.products.AddStock(ctx, storeID, item.ProductID, item.VariantID, item.Quantity)
 		if errors.Is(err, interfaces.ErrNotFound) {
 			continue
 		}
 		if err != nil {
-			_ = s.reserveAgain(ctx, storeID, restored)
+			if undoErr := s.reserveAgain(ctx, storeID, restored); undoErr != nil {
+				return errors.Join(err, undoErr)
+			}
 			return err
 		}
 		restored = append(restored, item)
@@ -189,40 +204,71 @@ func (s *OrderService) reserveAgain(ctx context.Context, storeID string, items [
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	for i := len(items) - 1; i >= 0; i-- {
-		if err := s.products.AddStock(ctx, storeID, items[i].ProductID, -items[i].Quantity); err != nil && !errors.Is(err, interfaces.ErrNotFound) {
+		if err := s.products.AddStock(ctx, storeID, items[i].ProductID, items[i].VariantID, -items[i].Quantity); err != nil && !errors.Is(err, interfaces.ErrNotFound) {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *OrderService) release(ctx context.Context, storeID string, held []ItemInput) {
+func (s *OrderService) release(ctx context.Context, storeID string, held []ItemInput) error {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
+	var first error
 	for i := len(held) - 1; i >= 0; i-- {
-		_ = s.products.AddStock(ctx, storeID, held[i].ProductID, held[i].Quantity)
+		if err := s.products.AddStock(ctx, storeID, held[i].ProductID, held[i].VariantID, held[i].Quantity); err != nil && first == nil {
+			first = err
+		}
 	}
+	return first
 }
 
 func mergeItems(items []ItemInput) []ItemInput {
 	order := make([]string, 0, len(items))
 	qty := map[string]int{}
 	price := map[string]int64{}
+	variant := map[string]string{}
 	for _, item := range items {
 		if item.ProductID == "" {
 			continue
 		}
-		if _, ok := qty[item.ProductID]; !ok {
-			order = append(order, item.ProductID)
-			price[item.ProductID] = item.UnitPriceCents
+		key := item.ProductID + "\x00" + item.VariantID
+		if _, ok := qty[key]; !ok {
+			order = append(order, key)
+			price[key] = item.UnitPriceCents
+			variant[key] = item.VariantID
 		}
-		qty[item.ProductID] += item.Quantity
+		qty[key] += item.Quantity
 	}
 	out := make([]ItemInput, 0, len(order))
-	for _, id := range order {
-		out = append(out, ItemInput{ProductID: id, Quantity: qty[id], UnitPriceCents: price[id]})
+	for _, key := range order {
+		productID, _, _ := strings.Cut(key, "\x00")
+		out = append(out, ItemInput{ProductID: productID, VariantID: variant[key], Quantity: qty[key], UnitPriceCents: price[key]})
 	}
 	return out
+}
+
+func pickVariant(product models.Product, variantID string) (models.Variant, error) {
+	product = product.WithVariants()
+	if variantID == "" {
+		if len(product.Variants) == 1 {
+			return product.Variants[0], nil
+		}
+		return models.Variant{}, apperr.New(http.StatusBadRequest, "choose_variant", "Choose a version of "+product.Name)
+	}
+	for _, variant := range product.Variants {
+		if variant.ID == variantID {
+			return variant, nil
+		}
+	}
+	return models.Variant{}, apperr.New(http.StatusConflict, "product_unavailable", "A product in this order is no longer available")
+}
+
+func variantDisplay(name string, variant models.Variant) string {
+	if label := variant.Label(); label != "" {
+		return name + " (" + label + ")"
+	}
+	return name
 }
 
 func validateCustomer(customer models.Customer) (models.Customer, error) {

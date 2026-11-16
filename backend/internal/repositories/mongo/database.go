@@ -46,9 +46,15 @@ func EnsureIndexes(ctx context.Context, db *mongo.Database) error {
 	}); err != nil {
 		return err
 	}
-	_, err := db.Collection("orders").Indexes().CreateMany(ctx, []mongo.IndexModel{
+	if _, err := db.Collection("orders").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		index("store_orders", bson.D{{Key: "storeId", Value: 1}, {Key: "createdAt", Value: -1}}),
 		index("store_status", bson.D{{Key: "storeId", Value: 1}, {Key: "status", Value: 1}}),
+	}); err != nil {
+		return err
+	}
+	_, err := db.Collection("collections").Indexes().CreateMany(ctx, []mongo.IndexModel{
+		unique("collection_slug", bson.D{{Key: "storeId", Value: 1}, {Key: "slug", Value: 1}}),
+		index("collection_created", bson.D{{Key: "storeId", Value: 1}, {Key: "createdAt", Value: -1}}),
 	})
 	return err
 }

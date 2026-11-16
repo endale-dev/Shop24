@@ -161,13 +161,14 @@ func (h *ProductHandler) SetStock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Stock int `json:"stock"`
+		Stock     int    `json:"stock"`
+		VariantID string `json:"variantId"`
 	}
 	if err := decode(w, r, &body); err != nil {
 		fail(h.log, w, err)
 		return
 	}
-	product, err := h.products.SetStock(r.Context(), owner, r.PathValue("id"), body.Stock)
+	product, err := h.products.SetStock(r.Context(), owner, r.PathValue("id"), body.VariantID, body.Stock)
 	if err != nil {
 		fail(h.log, w, err)
 		return
@@ -209,7 +210,7 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := interfaces.ProductFilter{
-		Query: r.URL.Query().Get("q"), Category: r.URL.Query().Get("category"), Limit: 100,
+		Query: r.URL.Query().Get("q"), Limit: 100,
 	}
 	switch r.URL.Query().Get("status") {
 	case "", "all":
@@ -222,10 +223,6 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	default:
 		fail(h.log, w, apperr.New(http.StatusBadRequest, "invalid_filter", "Status must be all, published, or draft"))
 		return
-	}
-	if r.URL.Query().Get("lowStock") == "1" {
-		filter.LowStock = true
-		filter.LowStockAt = services.LowStockThreshold
 	}
 	products, err := h.products.List(r.Context(), owner, filter)
 	if err != nil {
@@ -242,16 +239,35 @@ func productBody(w http.ResponseWriter, r *http.Request) (services.ProductInput,
 		PriceCents  int64    `json:"priceCents"`
 		Images      []string `json:"images"`
 		Category    string   `json:"category"`
-		SKU         string   `json:"sku"`
-		Stock       int      `json:"stock"`
-		Published   bool     `json:"published"`
+		OptionNames []string `json:"optionNames"`
+		Variants    []struct {
+			ID         string                 `json:"id"`
+			Options    []models.VariantOption `json:"options"`
+			SKU        string                 `json:"sku"`
+			PriceCents int64                  `json:"priceCents"`
+			Stock      int                    `json:"stock"`
+			ImageURL   string                 `json:"imageUrl"`
+		} `json:"variants"`
+		SKU       string `json:"sku"`
+		Stock     int    `json:"stock"`
+		Published bool   `json:"published"`
 	}
 	if err := decode(w, r, &body); err != nil {
 		return services.ProductInput{}, err
 	}
+	variants := make([]services.VariantInput, 0, len(body.Variants))
+	for _, variant := range body.Variants {
+		variants = append(variants, services.VariantInput{
+			ID: variant.ID, Options: variant.Options, SKU: variant.SKU,
+			PriceCents: variant.PriceCents, Stock: variant.Stock, ImageURL: variant.ImageURL,
+		})
+	}
+	if len(variants) == 0 {
+		variants = []services.VariantInput{{SKU: body.SKU, PriceCents: body.PriceCents, Stock: body.Stock}}
+	}
 	return services.ProductInput{
-		Name: body.Name, Description: body.Description, PriceCents: body.PriceCents, Images: body.Images,
-		Category: body.Category, SKU: body.SKU, Stock: body.Stock, Published: body.Published,
+		Name: body.Name, Description: body.Description, Images: body.Images, Category: body.Category,
+		OptionNames: body.OptionNames, Variants: variants, Published: body.Published,
 	}, nil
 }
 

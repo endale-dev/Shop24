@@ -24,6 +24,8 @@ func conflict(err error) (error, bool) {
 		return apperr.New(http.StatusConflict, "store_exists", "You already have a store"), true
 	case "sku":
 		return apperr.New(http.StatusConflict, "sku_taken", "A product with this SKU already exists"), true
+	case "collection_slug":
+		return apperr.New(http.StatusConflict, "slug_taken", "A collection with this address already exists"), true
 	default:
 		return apperr.New(http.StatusConflict, "conflict", "That value is already in use"), true
 	}

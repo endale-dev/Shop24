@@ -25,6 +25,7 @@ export function storePaths(slug: string) {
     cart: `${root}/cart`,
     checkout: `${root}/checkout`,
     product: (id: string) => `${root}/p/${id}`,
+    collection: (collectionSlug: string) => `${root}/c/${collectionSlug}`,
   }
 }
 

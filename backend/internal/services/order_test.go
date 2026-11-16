@@ -66,6 +66,45 @@ func TestPlaceOrderSnapshotsPriceAndRollsBackStock(t *testing.T) {
 	}
 }
 
+func TestPlaceOrderChargesTheChosenVariant(t *testing.T) {
+	stores := &memStores{items: []models.Store{{ID: "store-1", OwnerID: "user-1", Slug: "north", Published: true}}}
+	products := &memProducts{items: map[string]models.Product{
+		"coat": {
+			ID: "coat", StoreID: "store-1", Name: "Coat", PriceCents: 2000, Stock: 4, Published: true,
+			OptionNames: []string{"Color"},
+			Variants: []models.Variant{
+				{ID: "black", Options: []models.VariantOption{{Name: "Color", Value: "Black"}}, SKU: "C-B", PriceCents: 2000, Stock: 3},
+				{ID: "sand", Options: []models.VariantOption{{Name: "Color", Value: "Sand"}}, SKU: "C-S", PriceCents: 2200, Stock: 1},
+			},
+		},
+	}}
+	orders := &memOrders{}
+	service := NewOrderService(stores, products, orders)
+	order, err := service.Place(context.Background(), "north", PlaceOrderInput{
+		Customer: models.Customer{Name: "Ada Lovelace", Email: "ada@example.com", Address: "12 Analytical", City: "London"},
+		Items:    []ItemInput{{ProductID: "coat", VariantID: "sand", Quantity: 1, UnitPriceCents: 2200}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if order.Items[0].OptionLabel != "Sand" || order.Items[0].SKU != "C-S" || order.TotalCents != 2200 {
+		t.Fatalf("snapshot = %+v", order.Items)
+	}
+	coat := products.items["coat"]
+	if coat.Variants[0].Stock != 3 || coat.Variants[1].Stock != 0 || coat.Stock != 3 {
+		t.Fatalf("stock = %+v total %d", coat.Variants, coat.Stock)
+	}
+	if _, err := service.Place(context.Background(), "north", PlaceOrderInput{
+		Customer: models.Customer{Name: "Ada Lovelace", Email: "ada@example.com", Address: "12 Analytical", City: "London"},
+		Items:    []ItemInput{{ProductID: "coat", Quantity: 1, UnitPriceCents: 2000}},
+	}); err == nil {
+		t.Fatal("expected a version choice")
+	}
+	if products.items["coat"].Stock != 3 {
+		t.Fatalf("stock changed without a version: %d", products.items["coat"].Stock)
+	}
+}
+
 func TestPlaceOrderRejectsInsufficientStock(t *testing.T) {
 	stores := &memStores{items: []models.Store{{ID: "store-1", Slug: "north", Published: true}}}
 	products := &memProducts{items: map[string]models.Product{
@@ -134,20 +173,54 @@ func (m *memProducts) FindByID(_ context.Context, storeID, id string) (models.Pr
 func (m *memProducts) List(context.Context, string, interfaces.ProductFilter) ([]models.Product, error) {
 	return nil, nil
 }
-func (m *memProducts) AddStock(_ context.Context, storeID, id string, delta int) error {
+func (m *memProducts) AddStock(_ context.Context, storeID, id, variantID string, delta int) error {
 	product, ok := m.items[id]
 	if !ok || product.StoreID != storeID {
 		return interfaces.ErrNotFound
 	}
-	if product.Stock+delta < 0 {
-		return interfaces.ErrInsufficientStock
+	if variantID == "" {
+		variantID = id
 	}
-	product.Stock += delta
+	if len(product.Variants) == 0 {
+		if variantID != id && variantID != product.ID {
+			return interfaces.ErrNotFound
+		}
+		if product.Stock+delta < 0 {
+			return interfaces.ErrInsufficientStock
+		}
+		product.Stock += delta
+		m.items[id] = product
+		return nil
+	}
+	found := false
+	for i := range product.Variants {
+		if product.Variants[i].ID != variantID {
+			continue
+		}
+		found = true
+		if product.Variants[i].Stock+delta < 0 {
+			return interfaces.ErrInsufficientStock
+		}
+		product.Variants[i].Stock += delta
+	}
+	if !found {
+		return interfaces.ErrNotFound
+	}
+	total := 0
+	for _, variant := range product.Variants {
+		total += variant.Stock
+	}
+	product.Stock = total
 	m.items[id] = product
 	return nil
 }
-func (m *memProducts) SetStock(context.Context, string, string, int, time.Time) error { return nil }
-func (m *memProducts) Totals(context.Context, string) (int, int, error)               { return 0, 0, nil }
+func (m *memProducts) SetStock(context.Context, string, string, string, int, time.Time) error {
+	return nil
+}
+func (m *memProducts) SKUInUse(context.Context, string, string, string) (bool, error) {
+	return false, nil
+}
+func (m *memProducts) Totals(context.Context, string) (int, int, error) { return 0, 0, nil }
 
 type memOrders struct {
 	items []models.Order

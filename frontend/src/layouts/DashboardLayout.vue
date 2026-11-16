@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useShopStore } from '@/stores/shop'
@@ -12,10 +12,12 @@ const open = ref(false)
 const links = [
   { to: '/', label: 'Overview', store: false },
   { to: '/products', label: 'Products', store: true },
+  { to: '/collections', label: 'Collections', store: true },
   { to: '/orders', label: 'Orders', store: true },
   { to: '/builder', label: 'Builder', store: true },
   { to: '/settings', label: 'Settings', store: true },
 ]
+const visibleLinks = computed(() => links.filter((link) => !link.store || shop.shop))
 
 async function signOut() {
   await auth.logout()
@@ -33,9 +35,9 @@ async function signOut() {
       </div>
       <nav class="space-y-1 px-3 pb-5" :class="open ? 'block' : 'hidden md:block'">
         <RouterLink
-          v-for="link in links"
+          v-for="link in visibleLinks"
           :key="link.to"
-          :to="link.store && !shop.shop ? '/' : link.to"
+          :to="link.to"
           class="block rounded-xl px-3 py-2 text-sm text-stone-300 transition hover:bg-white/10 hover:text-white"
           :class="route.path === link.to || (link.to !== '/' && route.path.startsWith(link.to)) ? 'bg-white/10 text-white' : ''"
           @click="open = false"

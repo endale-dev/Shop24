@@ -24,7 +24,9 @@ func ValidOrderStatus(status OrderStatus) bool {
 
 type OrderItem struct {
 	ProductID      string `json:"productId"`
+	VariantID      string `json:"variantId"`
 	Name           string `json:"name"`
+	OptionLabel    string `json:"optionLabel"`
 	SKU            string `json:"sku"`
 	UnitPriceCents int64  `json:"unitPriceCents"`
 	Quantity       int    `json:"quantity"`

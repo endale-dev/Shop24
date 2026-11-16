@@ -25,7 +25,6 @@ type StoreRepository interface {
 
 type ProductFilter struct {
 	Query      string
-	Category   string
 	Published  *bool
 	LowStock   bool
 	LowStockAt int
@@ -38,9 +37,25 @@ type ProductRepository interface {
 	Delete(ctx context.Context, storeID, id string) error
 	FindByID(ctx context.Context, storeID, id string) (models.Product, error)
 	List(ctx context.Context, storeID string, filter ProductFilter) ([]models.Product, error)
-	AddStock(ctx context.Context, storeID, id string, delta int) error
-	SetStock(ctx context.Context, storeID, id string, stock int, at time.Time) error
+	AddStock(ctx context.Context, storeID, id, variantID string, delta int) error
+	SetStock(ctx context.Context, storeID, id, variantID string, stock int, at time.Time) error
+	SKUInUse(ctx context.Context, storeID, sku, exceptProductID string) (bool, error)
 	Totals(ctx context.Context, storeID string) (products int, units int, err error)
+}
+
+type CollectionFilter struct {
+	Published *bool
+	Limit     int
+}
+
+type CollectionRepository interface {
+	Create(ctx context.Context, collection models.Collection) (models.Collection, error)
+	Update(ctx context.Context, collection models.Collection) (models.Collection, error)
+	Delete(ctx context.Context, storeID, id string) error
+	FindByID(ctx context.Context, storeID, id string) (models.Collection, error)
+	FindBySlug(ctx context.Context, storeID, slug string) (models.Collection, error)
+	List(ctx context.Context, storeID string, filter CollectionFilter) ([]models.Collection, error)
+	DetachProduct(ctx context.Context, storeID, productID string) error
 }
 
 type OrderFilter struct {
