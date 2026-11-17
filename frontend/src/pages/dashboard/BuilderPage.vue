@@ -9,7 +9,7 @@ import { listProducts } from '@/features/products/api'
 import { generateDesign, publishDesign, refineDesign, saveDesign } from '@/features/storefront-builder/api'
 import { publicUrl, storePaths } from '@/features/stores/host'
 import { useShopStore } from '@/stores/shop'
-import type { Collection, Product, Section, StorefrontConfig } from '@/types'
+import type { Collection, DesignNote, Product, Section, StorefrontConfig } from '@/types'
 
 const shop = useShopStore()
 const products = ref<Product[]>([])
@@ -101,12 +101,7 @@ onMounted(async () => {
     if (!current) return
     draft.value = cloneConfig(current.draft)
     note.value = current.designNote?.summary || ''
-    messages.value = [
-      {
-        role: 'designer',
-        text: note.value || 'Describe the shop, or a change. I can restyle the hero, the product layout, the buttons, the collections, and the colors.',
-      },
-    ]
+    messages.value = remembered(current.designNote)
     const [catalog, groups] = await Promise.all([listProducts({ status: 'published' }), listCollections()])
     products.value = catalog.items
     collections.value = groups.items.filter((item) => item.published)
@@ -120,15 +115,30 @@ async function scrollThread() {
   if (thread.value) thread.value.scrollTop = thread.value.scrollHeight
 }
 
+function remembered(note?: DesignNote) {
+  const stored = note?.turns?.filter((turn) => turn.text && (turn.role === 'user' || turn.role === 'designer'))
+  if (stored?.length) return stored.map((turn) => ({ role: turn.role === 'user' ? 'user' as const : 'designer' as const, text: turn.text }))
+  const turns: { role: 'user' | 'designer'; text: string }[] = []
+  if (note?.prompt) turns.push({ role: 'user', text: note.prompt })
+  if (note?.summary) turns.push({ role: 'designer', text: note.summary })
+  if (!turns.length) {
+    turns.push({ role: 'designer', text: 'Describe the shop, or a change. I can restyle the hero, the product layout, the buttons, the collections, and the colors.' })
+  }
+  return turns
+}
+
 async function send(kind: 'generate' | 'refine') {
   const text = prompt.value.trim()
-  if (!text || busy.value) return
+  if (!text || busy.value || !draft.value) return
   messages.value.push({ role: 'user', text })
   await scrollThread()
-  await run(kind)
-  const reply = error.value || note.value
-  if (reply) messages.value.push({ role: 'designer', text: reply })
-  if (!error.value) prompt.value = ''
+  const ok = await run(kind)
+  if (ok) {
+    messages.value = remembered(shop.shop?.designNote)
+    prompt.value = ''
+  } else if (error.value) {
+    messages.value.push({ role: 'designer', text: error.value })
+  }
   await scrollThread()
 }
 
@@ -178,15 +188,18 @@ function nudgeChat(event: KeyboardEvent) {
 }
 
 async function run(kind: 'generate' | 'refine') {
+  if (!draft.value) return false
   busy.value = kind
   error.value = ''
   try {
-    const result = kind === 'generate' ? await generateDesign(prompt.value) : await refineDesign(prompt.value)
+    const result = kind === 'generate' ? await generateDesign(prompt.value) : await refineDesign(prompt.value, draft.value)
     shop.set(result.store)
     draft.value = cloneConfig(result.store.draft)
     note.value = result.summary
+    return true
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'The designer failed'
+    return false
   } finally {
     busy.value = ''
   }
@@ -413,6 +426,7 @@ function move(index: number, direction: number) {
       </div>
 
       <div class="shrink-0 border-t border-border bg-surface px-3 py-3">
+        <p v-if="shop.shop.published" class="mb-2 text-xs text-muted">Sending applies this design to the live shop.</p>
         <div v-if="messages.length < 3" class="mb-2 flex flex-wrap gap-x-3 gap-y-1">
           <button v-for="example in examples" :key="example.label" type="button" class="text-xs text-muted hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" @click="prompt = example.prompt">{{ example.label }}</button>
         </div>

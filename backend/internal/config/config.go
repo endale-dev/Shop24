@@ -11,20 +11,28 @@ import (
 )
 
 type Config struct {
-	Port         string
-	MongoURI     string
-	MongoDB      string
-	JWTSecret    string
-	JWTTTL       time.Duration
-	CookieSecure bool
-	CookieDomain string
-	CORSOrigins  []string
-	BaseDomain   string
-	AIProvider   string
-	AIAPIKey     string
-	AIModel      string
-	AIBaseURL    string
-	AITimeout    time.Duration
+	Port               string
+	MongoURI           string
+	MongoDB            string
+	JWTSecret          string
+	JWTTTL             time.Duration
+	CookieSecure       bool
+	CookieDomain       string
+	CORSOrigins        []string
+	BaseDomain         string
+	AIProvider         string
+	AIAPIKey           string
+	AIModel            string
+	AIBaseURL          string
+	AITimeout          time.Duration
+	PublicURL          string
+	GoogleClientID     string
+	GoogleClientSecret string
+	SMTPHost           string
+	SMTPPort           int
+	SMTPUser           string
+	SMTPPassword       string
+	SMTPFrom           string
 }
 
 func Load() (Config, error) {
@@ -37,6 +45,10 @@ func Load() (Config, error) {
 	aiTimeout, err := strconv.Atoi(env("AI_TIMEOUT_SECONDS", "30"))
 	if err != nil || aiTimeout < 5 || aiTimeout > 120 {
 		return Config{}, fmt.Errorf("AI_TIMEOUT_SECONDS must be between 5 and 120")
+	}
+	smtpPort, err := strconv.Atoi(env("SMTP_PORT", "587"))
+	if err != nil || smtpPort < 1 || smtpPort > 65535 {
+		return Config{}, fmt.Errorf("SMTP_PORT must be between 1 and 65535")
 	}
 
 	secret := os.Getenv("JWT_SECRET")
@@ -70,20 +82,28 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		Port:         env("PORT", "8080"),
-		MongoURI:     env("MONGO_URI", "mongodb://localhost:27017"),
-		MongoDB:      env("MONGO_DB", "sable"),
-		JWTSecret:    secret,
-		JWTTTL:       time.Duration(ttlHours) * time.Hour,
-		CookieSecure: env("COOKIE_SECURE", "false") == "true",
-		CookieDomain: strings.TrimSpace(os.Getenv("COOKIE_DOMAIN")),
-		CORSOrigins:  origins,
-		BaseDomain:   base,
-		AIProvider:   provider,
-		AIAPIKey:     apiKey,
-		AIModel:      model,
-		AIBaseURL:    baseURL,
-		AITimeout:    time.Duration(aiTimeout) * time.Second,
+		Port:               env("PORT", "8080"),
+		MongoURI:           env("MONGO_URI", "mongodb://localhost:27017"),
+		MongoDB:            env("MONGO_DB", "sable"),
+		JWTSecret:          secret,
+		JWTTTL:             time.Duration(ttlHours) * time.Hour,
+		CookieSecure:       env("COOKIE_SECURE", "false") == "true",
+		CookieDomain:       strings.TrimSpace(os.Getenv("COOKIE_DOMAIN")),
+		CORSOrigins:        origins,
+		BaseDomain:         base,
+		AIProvider:         provider,
+		AIAPIKey:           apiKey,
+		AIModel:            model,
+		AIBaseURL:          baseURL,
+		AITimeout:          time.Duration(aiTimeout) * time.Second,
+		PublicURL:          strings.TrimRight(env("APP_PUBLIC_URL", "http://localhost:5173"), "/"),
+		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		SMTPHost:           strings.TrimSpace(os.Getenv("SMTP_HOST")),
+		SMTPPort:           smtpPort,
+		SMTPUser:           strings.TrimSpace(os.Getenv("SMTP_USERNAME")),
+		SMTPPassword:       os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:           strings.TrimSpace(os.Getenv("SMTP_FROM")),
 	}, nil
 }
 

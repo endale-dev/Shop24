@@ -30,11 +30,17 @@ func SafeDetail(err error) string {
 	return detail
 }
 
+type Turn struct {
+	Role string `json:"role"`
+	Text string `json:"text"`
+}
+
 type StoreContext struct {
 	Name         string
 	Description  string
 	Categories   []string
 	ProductCount int
+	History      []Turn `json:"history,omitempty"`
 }
 
 type Result struct {

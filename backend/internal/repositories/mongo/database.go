@@ -30,7 +30,11 @@ func EnsureIndexes(ctx context.Context, db *mongo.Database) error {
 	index := func(name string, keys bson.D) mongo.IndexModel {
 		return mongo.IndexModel{Keys: keys, Options: options.Index().SetName(name)}
 	}
-	if _, err := db.Collection("users").Indexes().CreateOne(ctx, unique("email", bson.D{{Key: "email", Value: 1}})); err != nil {
+	if _, err := db.Collection("users").Indexes().CreateMany(ctx, []mongo.IndexModel{
+		unique("email", bson.D{{Key: "email", Value: 1}}),
+		{Keys: bson.D{{Key: "googleSub", Value: 1}}, Options: options.Index().SetUnique(true).SetSparse(true).SetName("googleSub")},
+		index("resetHash", bson.D{{Key: "resetHash", Value: 1}}),
+	}); err != nil {
 		return err
 	}
 	if _, err := db.Collection("stores").Indexes().CreateMany(ctx, []mongo.IndexModel{

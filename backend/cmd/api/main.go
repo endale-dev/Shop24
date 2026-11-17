@@ -11,6 +11,7 @@ import (
 	"shop24/internal/ai"
 	"shop24/internal/config"
 	"shop24/internal/handlers"
+	"shop24/internal/mail"
 	mongorepo "shop24/internal/repositories/mongo"
 	"shop24/internal/server"
 	"shop24/internal/services"
@@ -53,8 +54,19 @@ func main() {
 	collections := mongorepo.NewCollectionRepository(db)
 	orders := mongorepo.NewOrderRepository(db)
 	issuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
+	var mailer services.Mailer = mail.Log{Log: log}
+	if cfg.SMTPHost != "" {
+		from := cfg.SMTPFrom
+		if from == "" {
+			from = cfg.SMTPUser
+		}
+		mailer = mail.SMTP{Host: cfg.SMTPHost, Port: cfg.SMTPPort, User: cfg.SMTPUser, Password: cfg.SMTPPassword, From: from}
+		log.Info("mail", "mode", "smtp", "host", cfg.SMTPHost)
+	} else {
+		log.Info("mail", "mode", "log")
+	}
 
-	authService := services.NewAuthService(users, issuer)
+	authService := services.NewAuthService(users, issuer, mailer, cfg.PublicURL)
 	storeService := services.NewStoreService(stores)
 	productService := services.NewProductService(stores, products, collections)
 	collectionService := services.NewCollectionService(stores, products, collections)
@@ -81,7 +93,7 @@ func main() {
 		Config:      cfg,
 		Log:         log,
 		Tokens:      issuer,
-		Auth:        handlers.NewAuthHandler(authService, log, cfg.CookieSecure, cfg.CookieDomain),
+		Auth:        handlers.NewAuthHandler(authService, issuer, log, cfg.CookieSecure, cfg.CookieDomain, cfg.PublicURL, cfg.GoogleClientID, cfg.GoogleClientSecret),
 		Stores:      handlers.NewStoreHandler(storeService, log),
 		Products:    handlers.NewProductHandler(productService, log),
 		Collections: handlers.NewCollectionHandler(collectionService, log),

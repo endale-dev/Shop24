@@ -44,6 +44,8 @@ func duplicateField(err error) string {
 		return "collection_slug"
 	case strings.Contains(message, "slug"):
 		return "slug"
+	case strings.Contains(message, "googleSub"):
+		return "googleSub"
 	case strings.Contains(message, "email"):
 		return "email"
 	default:
@@ -73,6 +75,9 @@ type userDoc struct {
 	Name         string             `bson:"name"`
 	Email        string             `bson:"email"`
 	PasswordHash string             `bson:"passwordHash"`
+	GoogleSub    string             `bson:"googleSub,omitempty"`
+	ResetHash    string             `bson:"resetHash,omitempty"`
+	ResetExpires time.Time          `bson:"resetExpires,omitempty"`
 	CreatedAt    time.Time          `bson:"createdAt"`
 	UpdatedAt    time.Time          `bson:"updatedAt"`
 }
@@ -80,6 +85,7 @@ type userDoc struct {
 func (d userDoc) model() models.User {
 	return models.User{
 		ID: d.ID.Hex(), Name: d.Name, Email: d.Email, PasswordHash: d.PasswordHash,
+		GoogleSub: d.GoogleSub, ResetHash: d.ResetHash, ResetExpires: d.ResetExpires,
 		CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt,
 	}
 }

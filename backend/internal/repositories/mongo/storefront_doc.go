@@ -20,12 +20,18 @@ type colorDoc struct {
 }
 
 type themeDoc struct {
-	Name        string   `bson:"name"`
-	Colors      colorDoc `bson:"colors"`
-	FontHeading string   `bson:"fontHeading"`
-	FontBody    string   `bson:"fontBody"`
-	Radius      string   `bson:"radius"`
-	ImageRatio  string   `bson:"imageRatio"`
+	Name           string   `bson:"name"`
+	Colors         colorDoc `bson:"colors"`
+	FontHeading    string   `bson:"fontHeading"`
+	FontBody       string   `bson:"fontBody"`
+	Radius         string   `bson:"radius"`
+	ImageRatio     string   `bson:"imageRatio"`
+	Density        string   `bson:"density"`
+	Buttons        string   `bson:"buttons"`
+	Cards          string   `bson:"cards"`
+	Collections    string   `bson:"collections"`
+	HeroLayout     string   `bson:"heroLayout"`
+	ProductDisplay string   `bson:"productDisplay"`
 }
 
 type navDoc struct {
@@ -107,11 +113,17 @@ type storefrontDoc struct {
 	Footer   footerDoc    `bson:"footer"`
 }
 
+type designTurnDoc struct {
+	Role string `bson:"role"`
+	Text string `bson:"text"`
+}
+
 type designNoteDoc struct {
-	Provider string `bson:"provider"`
-	Mode     string `bson:"mode"`
-	Prompt   string `bson:"prompt"`
-	Summary  string `bson:"summary"`
+	Provider string          `bson:"provider"`
+	Mode     string          `bson:"mode"`
+	Prompt   string          `bson:"prompt"`
+	Summary  string          `bson:"summary"`
+	Turns    []designTurnDoc `bson:"turns,omitempty"`
 }
 
 type storeDoc struct {
@@ -192,6 +204,8 @@ func storefrontToDoc(cfg models.StorefrontConfig) storefrontDoc {
 			},
 			FontHeading: cfg.Theme.FontHeading, FontBody: cfg.Theme.FontBody,
 			Radius: cfg.Theme.Radius, ImageRatio: cfg.Theme.ImageRatio,
+			Density: cfg.Theme.Density, Buttons: cfg.Theme.Buttons, Cards: cfg.Theme.Cards,
+			Collections: cfg.Theme.Collections, HeroLayout: cfg.Theme.HeroLayout, ProductDisplay: cfg.Theme.ProductDisplay,
 		},
 		Header: headerDoc{
 			Announcement: cfg.Header.Announcement, ShowAnnouncement: cfg.Header.ShowAnnouncement,
@@ -244,6 +258,8 @@ func storefrontFromDoc(doc storefrontDoc) models.StorefrontConfig {
 			},
 			FontHeading: doc.Theme.FontHeading, FontBody: doc.Theme.FontBody,
 			Radius: doc.Theme.Radius, ImageRatio: doc.Theme.ImageRatio,
+			Density: doc.Theme.Density, Buttons: doc.Theme.Buttons, Cards: doc.Theme.Cards,
+			Collections: doc.Theme.Collections, HeroLayout: doc.Theme.HeroLayout, ProductDisplay: doc.Theme.ProductDisplay,
 		},
 		Header: models.Header{
 			Announcement: doc.Header.Announcement, ShowAnnouncement: doc.Header.ShowAnnouncement,
@@ -255,14 +271,22 @@ func storefrontFromDoc(doc storefrontDoc) models.StorefrontConfig {
 }
 
 func noteToDoc(note models.DesignNote) designNoteDoc {
-	return designNoteDoc{Provider: note.Provider, Mode: note.Mode, Prompt: note.Prompt, Summary: note.Summary}
+	turns := make([]designTurnDoc, 0, len(note.Turns))
+	for _, turn := range note.Turns {
+		turns = append(turns, designTurnDoc{Role: turn.Role, Text: turn.Text})
+	}
+	return designNoteDoc{Provider: note.Provider, Mode: note.Mode, Prompt: note.Prompt, Summary: note.Summary, Turns: turns}
 }
 
 func noteFromDoc(doc *designNoteDoc) *models.DesignNote {
 	if doc == nil {
 		return nil
 	}
-	return &models.DesignNote{Provider: doc.Provider, Mode: doc.Mode, Prompt: doc.Prompt, Summary: doc.Summary}
+	turns := make([]models.DesignTurn, 0, len(doc.Turns))
+	for _, turn := range doc.Turns {
+		turns = append(turns, models.DesignTurn{Role: turn.Role, Text: turn.Text})
+	}
+	return &models.DesignNote{Provider: doc.Provider, Mode: doc.Mode, Prompt: doc.Prompt, Summary: doc.Summary, Turns: turns}
 }
 
 func (d storeDoc) model() models.Store {

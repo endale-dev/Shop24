@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { currentUser, login as loginRequest, logout as logoutRequest, register as registerRequest } from '@/features/auth/api'
+import {
+  changePassword as changePasswordRequest,
+  currentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  register as registerRequest,
+  resetPassword as resetPasswordRequest,
+  updateName as updateNameRequest,
+} from '@/features/auth/api'
 import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -30,5 +38,17 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, ready, bootstrap, login, register, logout }
+  async function resetPassword(token: string, password: string) {
+    user.value = await resetPasswordRequest(token, password)
+  }
+
+  async function saveName(name: string) {
+    user.value = await updateNameRequest(name)
+  }
+
+  async function savePassword(current: string, password: string) {
+    user.value = await changePasswordRequest({ current, password })
+  }
+
+  return { user, ready, bootstrap, login, register, logout, resetPassword, saveName, savePassword }
 })

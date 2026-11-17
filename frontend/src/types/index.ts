@@ -2,6 +2,8 @@ export type User = {
   id: string
   name: string
   email: string
+  hasPassword: boolean
+  googleLinked: boolean
   createdAt: string
   updatedAt: string
 }
@@ -66,7 +68,9 @@ export type StorefrontConfig = {
   footer: { text: string; links: NavItem[] }
 }
 
-export type DesignNote = { provider: string; mode: string; prompt: string; summary: string }
+export type DesignTurn = { role: 'user' | 'designer' | string; text: string }
+
+export type DesignNote = { provider: string; mode: string; prompt: string; summary: string; turns?: DesignTurn[] }
 
 export type Store = {
   id: string

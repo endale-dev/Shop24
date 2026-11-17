@@ -122,6 +122,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               <p class="truncate text-xs text-muted">{{ auth.user?.email }}</p>
             </div>
             <div class="my-1 border-t border-border" role="separator"></div>
+            <RouterLink
+              class="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              to="/account"
+              role="menuitem"
+            >
+              <Icon name="user" /> Account
+            </RouterLink>
             <button
               class="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm hover:bg-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               type="button"
@@ -144,7 +151,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
     <aside
       class="bg-surface transition-[width] duration-200 ease-out md:sticky md:top-0 md:flex md:h-dvh md:shrink-0 md:flex-col md:border-r md:border-border"
-      :class="collapsed ? 'md:w-14' : 'md:w-[220px]'"
+      :class="[collapsed ? 'md:w-14' : 'md:w-[220px]', accountOpen ? 'z-40' : '']"
     >
       <div class="hidden min-h-12 items-center gap-2 px-2 py-2 md:flex" :class="collapsed ? 'flex-col' : 'flex-row-reverse justify-between'">
         <button
@@ -226,6 +233,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             <p class="truncate text-xs text-muted">{{ auth.user?.email }}</p>
           </div>
           <div class="my-1 border-t border-border" role="separator"></div>
+          <RouterLink
+            class="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            to="/account"
+            role="menuitem"
+          >
+            <Icon name="user" /> Account
+          </RouterLink>
           <button
             class="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm hover:bg-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             type="button"

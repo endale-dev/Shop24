@@ -1,10 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { hostSlug } from '@/features/stores/host'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import HomeSwitch from '@/layouts/HomeSwitch.vue'
 import StorefrontLayout from '@/layouts/StorefrontLayout.vue'
+import ForgotPage from '@/pages/auth/ForgotPage.vue'
 import LoginPage from '@/pages/auth/LoginPage.vue'
 import RegisterPage from '@/pages/auth/RegisterPage.vue'
+import ResetPage from '@/pages/auth/ResetPage.vue'
+import AccountPage from '@/pages/dashboard/AccountPage.vue'
 import BuilderPage from '@/pages/dashboard/BuilderPage.vue'
 import OrderDetailPage from '@/pages/dashboard/OrderDetailPage.vue'
 import OrdersPage from '@/pages/dashboard/OrdersPage.vue'
@@ -31,25 +34,29 @@ const storefrontChildren = [
   { path: 'checkout', name: 'store-checkout', component: CheckoutPage },
 ]
 
+const store = { auth: true, store: true }
+
 const dashboardRoutes = [
   { path: '/login', component: AuthLayout, meta: { guest: true }, children: [{ path: '', component: LoginPage }] },
   { path: '/register', component: AuthLayout, meta: { guest: true }, children: [{ path: '', component: RegisterPage }] },
+  { path: '/forgot', component: AuthLayout, meta: { guest: true }, children: [{ path: '', component: ForgotPage }] },
+  { path: '/reset', component: AuthLayout, children: [{ path: '', component: ResetPage }] },
   {
     path: '/',
-    component: DashboardLayout,
-    meta: { auth: true },
+    component: HomeSwitch,
     children: [
       { path: '', component: OverviewPage },
-      { path: 'products', component: ProductsPage, meta: { store: true } },
-      { path: 'products/new', component: ProductFormPage, meta: { store: true } },
-      { path: 'products/:id', component: ProductFormPage, meta: { store: true } },
-      { path: 'collections', component: CollectionsPage, meta: { store: true } },
-      { path: 'collections/new', component: CollectionFormPage, meta: { store: true } },
-      { path: 'collections/:id', component: CollectionFormPage, meta: { store: true } },
-      { path: 'orders', component: OrdersPage, meta: { store: true } },
-      { path: 'orders/:id', component: OrderDetailPage, meta: { store: true } },
-      { path: 'builder', component: BuilderPage, meta: { store: true } },
-      { path: 'settings', component: SettingsPage, meta: { store: true } },
+      { path: 'account', component: AccountPage, meta: { auth: true } },
+      { path: 'products', component: ProductsPage, meta: store },
+      { path: 'products/new', component: ProductFormPage, meta: store },
+      { path: 'products/:id', component: ProductFormPage, meta: store },
+      { path: 'collections', component: CollectionsPage, meta: store },
+      { path: 'collections/new', component: CollectionFormPage, meta: store },
+      { path: 'collections/:id', component: CollectionFormPage, meta: store },
+      { path: 'orders', component: OrdersPage, meta: store },
+      { path: 'orders/:id', component: OrderDetailPage, meta: store },
+      { path: 'builder', component: BuilderPage, meta: store },
+      { path: 'settings', component: SettingsPage, meta: store },
     ],
   },
   { path: '/s/:slug', component: StorefrontLayout, children: storefrontChildren },

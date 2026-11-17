@@ -5,8 +5,8 @@ export function generateDesign(prompt: string) {
   return request<DesignResult>('/api/storefront/generate', { method: 'POST', body: JSON.stringify({ prompt }) })
 }
 
-export function refineDesign(prompt: string) {
-  return request<DesignResult>('/api/storefront/refine', { method: 'POST', body: JSON.stringify({ prompt }) })
+export function refineDesign(prompt: string, config: StorefrontConfig) {
+  return request<DesignResult>('/api/storefront/refine', { method: 'POST', body: JSON.stringify({ prompt, config }) })
 }
 
 export function saveDesign(config: StorefrontConfig) {

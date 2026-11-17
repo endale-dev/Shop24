@@ -34,7 +34,8 @@ func (h *StorefrontHandler) prompt(w http.ResponseWriter, r *http.Request, refin
 		return
 	}
 	var body struct {
-		Prompt string `json:"prompt"`
+		Prompt string                   `json:"prompt"`
+		Config *models.StorefrontConfig `json:"config"`
 	}
 	if err := decode(w, r, &body); err != nil {
 		fail(h.log, w, err)
@@ -42,7 +43,7 @@ func (h *StorefrontHandler) prompt(w http.ResponseWriter, r *http.Request, refin
 	}
 	var result services.DesignResult
 	if refine {
-		result, err = h.builder.Refine(r.Context(), owner, body.Prompt)
+		result, err = h.builder.Refine(r.Context(), owner, body.Prompt, body.Config)
 	} else {
 		result, err = h.builder.Generate(r.Context(), owner, body.Prompt)
 	}

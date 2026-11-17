@@ -18,6 +18,8 @@ func conflict(err error) (error, bool) {
 	switch duplicate.Field {
 	case "email":
 		return apperr.New(http.StatusConflict, "email_taken", "An account with this email already exists"), true
+	case "googleSub":
+		return apperr.New(http.StatusConflict, "google_taken", "That Google account is already used"), true
 	case "slug":
 		return apperr.New(http.StatusConflict, "slug_taken", "That store address is already taken"), true
 	case "ownerId":

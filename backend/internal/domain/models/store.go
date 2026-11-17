@@ -18,11 +18,17 @@ type Store struct {
 	UpdatedAt   time.Time        `json:"updatedAt"`
 }
 
+type DesignTurn struct {
+	Role string `json:"role"`
+	Text string `json:"text"`
+}
+
 type DesignNote struct {
-	Provider string `json:"provider"`
-	Mode     string `json:"mode"`
-	Prompt   string `json:"prompt"`
-	Summary  string `json:"summary"`
+	Provider string       `json:"provider"`
+	Mode     string       `json:"mode"`
+	Prompt   string       `json:"prompt"`
+	Summary  string       `json:"summary"`
+	Turns    []DesignTurn `json:"turns,omitempty"`
 }
 
 type PublicStore struct {

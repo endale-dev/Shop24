@@ -27,6 +27,7 @@ defineProps<{
     | 'chevron-up'
     | 'chevron-down'
     | 'send'
+    | 'user'
 }>()
 </script>
 
@@ -164,6 +165,10 @@ defineProps<{
     <template v-else-if="name === 'send'">
       <path d="M12 19V5" />
       <path d="m5 12 7-7 7 7" />
+    </template>
+    <template v-else-if="name === 'user'">
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
     </template>
   </svg>
 </template>

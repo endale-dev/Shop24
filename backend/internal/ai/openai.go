@@ -28,6 +28,7 @@ Header alignment is left or center. Nav targets are home, products, about, or ca
 Hero size is sm, md, or lg. Hero align is left or center. Hero ctaTarget uses the nav targets.
 Do not invent products or a working email form. Product sections are filled from the live catalog.
 When revising, change only what the prompt asks for and keep the rest.
+history, when present, is the earlier customization conversation. Keep those choices unless this prompt changes them.
 Write concise shop copy that fits on a phone. version, columns, and limit must be JSON numbers. visible and showAnnouncement must be JSON booleans.
 Use these field names exactly. theme is an object with name, not a string. A hero uses hero.headline and hero.subheadline. An about section uses about.title and about.body.
 {"version":1,"theme":{"name":"minimal","density":"tight","buttons":"link","cards":"flat","collections":"strip","heroLayout":"stack","productDisplay":"grid"},"header":{"announcement":"","showAnnouncement":false,"alignment":"left","nav":[{"label":"Shop","target":"products"}]},"sections":[{"id":"hero","type":"hero","visible":true,"hero":{"eyebrow":"Independent shop","headline":"Shop name","subheadline":"Short line about the shop.","ctaLabel":"Shop","ctaTarget":"products","imageUrl":"","align":"left","size":"md"}},{"id":"grid","type":"product_grid","visible":true,"productGrid":{"title":"The collection","columns":2,"limit":8}}],"footer":{"text":"© Shop name","links":[]}}`
