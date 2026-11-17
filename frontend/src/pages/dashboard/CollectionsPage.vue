@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import Icon from '@/components/ui/Icon.vue'
 import Modal from '@/components/ui/Modal.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { deleteCollection, listCollections } from '@/features/collections/api'
@@ -43,29 +44,29 @@ onMounted(load)
 <template>
   <div>
     <PageHeader title="Collections" subtitle="A named group of products with its own image. You choose what goes in.">
-      <Button to="/collections/new">New collection</Button>
+      <Button to="/collections/new"><Icon name="plus" /> New collection</Button>
     </PageHeader>
-    <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
-    <p v-if="loading" class="text-sm text-stone-500">Loading collections…</p>
-    <EmptyState v-else-if="items.length === 0" title="No collections yet" body="Group products such as coats or linen. Drafts stay off the public shop.">
-      <Button to="/collections/new">Add a collection</Button>
+    <p v-if="error" class="mb-4 rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
+    <p v-if="loading" class="text-sm text-muted">Loading collections…</p>
+    <EmptyState v-else-if="items.length === 0" icon="layers" title="No collections yet" body="Group products such as coats or linen. Drafts stay off the public shop.">
+      <Button to="/collections/new"><Icon name="plus" /> Add a collection</Button>
     </EmptyState>
-    <div v-else class="overflow-hidden rounded-2xl border border-line bg-card">
+    <div v-else class="overflow-x-auto rounded border border-border bg-surface">
       <table class="w-full text-left text-sm">
-        <thead class="border-b border-line text-xs uppercase tracking-wide text-stone-500">
-          <tr><th class="px-4 py-3">Collection</th><th class="px-4 py-3">Products</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr>
+        <thead class="border-b border-border text-xs font-medium text-muted">
+          <tr><th class="px-4 py-3 font-medium">Collection</th><th class="px-4 py-3 font-medium">Products</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium"></th></tr>
         </thead>
         <tbody>
-          <tr v-for="item in items" :key="item.id" class="border-b border-line last:border-0">
+          <tr v-for="item in items" :key="item.id" class="border-b border-border last:border-0 hover:bg-bg">
             <td class="px-4 py-3">
               <p class="font-medium">{{ item.name }}</p>
-              <p class="text-xs text-stone-500">/c/{{ item.slug }}</p>
+              <p class="text-xs text-muted">/c/{{ item.slug }}</p>
             </td>
             <td class="px-4 py-3">{{ item.productIds.length }}</td>
             <td class="px-4 py-3">{{ item.published ? 'Published' : 'Draft' }}</td>
             <td class="px-4 py-3 text-right">
-              <RouterLink class="mr-3 font-medium text-rust" :to="`/collections/${item.id}`">Edit</RouterLink>
-              <button class="text-stone-500" type="button" @click="pendingDelete = item">Delete</button>
+              <RouterLink class="mr-3 text-text underline" :to="`/collections/${item.id}`">Edit</RouterLink>
+              <button class="text-muted hover:text-danger" type="button" @click="pendingDelete = item">Delete</button>
             </td>
           </tr>
         </tbody>

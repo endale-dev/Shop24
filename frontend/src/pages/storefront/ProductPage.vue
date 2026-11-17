@@ -95,7 +95,7 @@ function add() {
             v-for="value in valuesFor(name)"
             :key="value"
             type="button"
-            class="border px-3 py-1.5 text-sm"
+            class="border px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]"
             :style="{ borderColor: 'var(--sf-border)', borderRadius: '999px', background: selected[name] === value ? 'var(--sf-primary)' : 'transparent', color: selected[name] === value ? 'var(--sf-on)' : 'var(--sf-text)' }"
             @click="choose(name, value)"
           >
@@ -107,9 +107,9 @@ function add() {
       <p v-else class="mt-4 text-sm">{{ variant.stock > 0 ? `${variant.stock} available` : 'Sold out' }}</p>
       <div class="mt-5 flex items-center gap-3">
         <input v-model.number="quantity" type="number" min="1" :max="variant?.stock || 1" class="w-20 border bg-transparent px-3 py-2" :style="{ borderColor: 'var(--sf-border)', borderRadius: 'var(--sf-radius)' }" :disabled="!variant || variant.stock < 1" />
-        <button type="button" class="px-5 py-2 text-sm font-semibold disabled:opacity-40" :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }" :disabled="!variant || variant.stock < 1" @click="add">Add to cart</button>
+        <button type="button" class="px-5 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)] disabled:opacity-40" :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }" :disabled="!variant || variant.stock < 1" @click="add">Add to cart</button>
       </div>
-      <p v-if="added" class="mt-3 text-sm">Added. <RouterLink :to="ctx.paths.value.cart">View cart</RouterLink></p>
+      <p v-if="added" class="mt-3 text-sm">Added. <RouterLink class="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]" :to="ctx.paths.value.cart">View cart</RouterLink></p>
     </div>
   </article>
 </template>

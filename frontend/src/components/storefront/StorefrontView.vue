@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import Icon from '@/components/ui/Icon.vue'
 import { formatMoney } from '@/features/money'
 import { priceVaries } from '@/features/products/api'
 import type { Collection, Product, PublicStore, Section } from '@/types'
@@ -114,13 +115,16 @@ function headerClass() {
     </div>
     <header class="sticky top-0 z-20 border-b backdrop-blur" :style="{ borderColor: 'var(--sf-border)', background: 'color-mix(in srgb, var(--sf-bg) 92%, transparent)' }">
       <div class="mx-auto flex max-w-6xl gap-3 px-4 py-3 sm:gap-4 sm:py-4" :class="headerClass()">
-        <component :is="linkIs('home')" v-bind="linkAttrs('home')" class="max-w-full truncate text-2xl font-semibold leading-none tracking-tight sm:text-[1.65rem]" :style="{ fontFamily: 'var(--sf-heading)' }">
+        <component :is="linkIs('home')" v-bind="linkAttrs('home')" class="max-w-full truncate text-2xl font-semibold leading-none tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)] sm:text-[1.65rem]" :style="{ fontFamily: 'var(--sf-heading)' }">
           {{ store.name }}
         </component>
         <nav class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" :style="{ color: 'var(--sf-muted)' }">
-          <component :is="linkIs(item.target)" v-for="item in config.header.nav" :key="item.target" v-bind="linkAttrs(item.target)" class="hover:opacity-70">
+          <component :is="linkIs(item.target)" v-for="item in config.header.nav" :key="item.target" v-bind="linkAttrs(item.target)" class="inline-flex items-center gap-1 hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]">
             {{ item.label }}
-            <span v-if="item.target === 'cart'"> ({{ cartCount }})</span>
+            <template v-if="item.target === 'cart'">
+              <Icon name="cart" />
+              {{ cartCount }}
+            </template>
           </component>
         </nav>
       </div>
@@ -130,7 +134,7 @@ function headerClass() {
       <section v-if="collections.length" class="mx-auto max-w-6xl px-4 pt-8 sm:pt-10">
         <h2 class="mb-4 text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">Collections</h2>
         <div class="grid gap-4" :class="compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'">
-          <component :is="interactive ? RouterLink : 'div'" v-for="item in collections" :key="item.id" :to="paths.collection(item.slug)" class="group block">
+          <component :is="interactive ? RouterLink : 'div'" v-for="item in collections" :key="item.id" :to="paths.collection(item.slug)" class="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]">
             <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
               <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" class="aspect-[4/3] w-full object-cover" />
               <div v-else class="grid aspect-[4/3] place-items-center text-3xl" :style="{ fontFamily: 'var(--sf-heading)', color: 'var(--sf-muted)' }">{{ item.name.slice(0, 1) }}</div>
@@ -149,7 +153,7 @@ function headerClass() {
               <component
                 :is="linkIs(section.hero.ctaTarget)"
                 v-bind="linkAttrs(section.hero.ctaTarget)"
-                class="mt-6 inline-flex px-5 py-2.5 text-sm font-semibold"
+                class="mt-6 inline-flex px-5 py-2.5 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]"
                 :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }"
               >
                 {{ section.hero.ctaLabel }}
@@ -178,7 +182,7 @@ function headerClass() {
               v-for="product in productsFor(section)"
               :key="product.id"
               :to="paths.product(product.id)"
-              class="group block"
+              class="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]"
             >
               <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
                 <img v-if="product.images[0]" :src="product.images[0]" :alt="product.name" class="w-full object-cover transition duration-300 group-hover:scale-[1.02]" :class="ratioClass()" />

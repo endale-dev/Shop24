@@ -48,11 +48,11 @@ provide(storefrontKey, { slug, store, products, paths, cart })
 </script>
 
 <template>
-  <div v-if="loading" class="grid min-h-screen place-items-center bg-paper text-sm text-stone-500">Opening the shop…</div>
-  <div v-else-if="error || !store" class="grid min-h-screen place-items-center bg-paper px-6 text-center">
+  <div v-if="loading" class="grid min-h-screen place-items-center bg-bg text-sm text-muted">Opening the shop…</div>
+  <div v-else-if="error || !store" class="grid min-h-screen place-items-center bg-bg px-6 text-center text-text">
     <div>
-      <p class="font-serif text-4xl">Shop unavailable</p>
-      <p class="mt-2 text-sm text-stone-600">{{ error || 'This store is not published.' }}</p>
+      <p class="text-lg font-semibold leading-6 text-text">Shop unavailable</p>
+      <p class="mt-2 text-sm text-muted">{{ error || 'This store is not published.' }}</p>
     </div>
   </div>
   <StorefrontView v-else :store="store" :products="products" :collections="collections" :paths="paths" :cart-count="cart.count.value" :show-sections="route.name === 'store-home'">

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
 import Field from '@/components/ui/Field.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import { controlClass } from '@/components/ui/control'
+import { controlClass, textareaClass } from '@/components/ui/control'
 import { centsToDollars, dollarsToCents } from '@/features/money'
 import { createProduct, getProduct, setStock, updateProduct } from '@/features/products/api'
 
@@ -160,35 +160,35 @@ async function submit() {
 <template>
   <form class="max-w-3xl" @submit.prevent="submit">
     <PageHeader :title="id ? 'Edit product' : 'New product'" subtitle="Each version keeps its own price, SKU, stock, and image. Nothing else is generated for you." />
-    <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
-    <div class="space-y-4 rounded-2xl border border-line bg-card p-5">
+    <p v-if="error" class="mb-4 rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
+    <div class="space-y-4 rounded border border-border bg-surface p-4">
       <Field label="Name"><input v-model="name" :class="controlClass" required /></Field>
-      <Field label="Description"><textarea v-model="description" :class="controlClass" rows="4" /></Field>
+      <Field label="Description"><textarea v-model="description" :class="textareaClass" rows="4" /></Field>
       <Field label="Category"><input v-model="category" :class="controlClass" /></Field>
-      <Field label="Image URLs" hint="One http or https URL per line. A version can override this with its own image."><textarea v-model="images" :class="controlClass" rows="3" /></Field>
+      <Field label="Image URLs" hint="One http or https URL per line. A version can override this with its own image."><textarea v-model="images" :class="textareaClass" rows="3" /></Field>
 
       <div v-if="!versions" class="grid gap-4 sm:grid-cols-3">
         <Field label="Price"><input v-model="variants[0].price" :class="controlClass" inputmode="decimal" required /></Field>
         <Field label="Stock"><input v-model.number="variants[0].stock" :class="controlClass" type="number" min="0" required /></Field>
         <Field label="SKU"><input v-model="variants[0].sku" :class="controlClass" required /></Field>
       </div>
-      <button v-if="!versions" class="text-sm font-medium text-rust" type="button" @click="enableVersions">Sell more than one version</button>
+      <button v-if="!versions" class="text-sm font-medium text-text underline" type="button" @click="enableVersions">Sell more than one version</button>
 
       <div v-else class="space-y-3">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-sm font-medium">Options</p>
-          <button class="text-sm text-stone-500" type="button" @click="useSingleVersion">Use one version</button>
+          <p class="text-sm font-semibold text-text">Options</p>
+          <button class="text-sm text-muted hover:text-danger" type="button" @click="useSingleVersion">Use one version</button>
         </div>
         <div v-for="(_, index) in optionNames" :key="index" class="flex gap-2">
           <input v-model="optionNames[index]" :class="controlClass" placeholder="Color, size, capacity…" required />
-          <button class="text-sm text-stone-500" type="button" @click="removeOption(index)">Remove</button>
+          <button class="shrink-0 text-sm text-muted hover:text-danger" type="button" @click="removeOption(index)">Remove</button>
         </div>
-        <button v-if="optionNames.length < 3" class="text-sm font-medium text-rust" type="button" @click="addOption">Add option</button>
+        <button v-if="optionNames.length < 3" class="text-sm font-medium text-text underline" type="button" @click="addOption">Add option</button>
         <div class="space-y-3">
-          <div v-for="(variant, index) in variants" :key="index" class="rounded-xl border border-line p-3">
+          <div v-for="(variant, index) in variants" :key="index" class="rounded border border-border p-3">
             <div class="mb-3 flex items-center justify-between">
-              <p class="text-sm font-medium">Version {{ index + 1 }}</p>
-              <button v-if="variants.length > 1" class="text-sm text-stone-500" type="button" @click="removeVariant(index)">Remove</button>
+              <p class="text-sm font-semibold text-text">Version {{ index + 1 }}</p>
+              <button v-if="variants.length > 1" class="text-sm text-muted hover:text-danger" type="button" @click="removeVariant(index)">Remove</button>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
               <Field v-for="(option, optionIndex) in optionNames" :key="optionIndex" :label="option || 'Value'">
@@ -201,7 +201,7 @@ async function submit() {
             </div>
           </div>
         </div>
-        <button v-if="variants.length < 30" class="text-sm font-medium text-rust" type="button" @click="addVariant">Add version</button>
+        <button v-if="variants.length < 30" class="text-sm font-medium text-text underline" type="button" @click="addVariant">Add version</button>
       </div>
 
       <label class="flex items-center gap-2 text-sm"><input v-model="published" type="checkbox" /> Published on the storefront</label>

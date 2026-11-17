@@ -147,24 +147,24 @@ function move(index: number, direction: number) {
 </script>
 
 <template>
-  <p v-if="error && !draft" class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
+  <p v-if="error && !draft" class="rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
   <div v-if="draft && previewStore && shop.shop" class="grid items-start gap-6 xl:grid-cols-[340px_1fr]">
     <div class="space-y-4">
       <div class="flex items-end justify-between gap-3">
         <div>
-          <h1 class="font-serif text-4xl">Builder</h1>
-          <p class="mt-1 text-sm text-stone-600">The preview is the draft. Publishing updates the shop host.</p>
+          <h1 class="text-lg font-semibold leading-6 text-text">Builder</h1>
+          <p class="mt-1 text-sm text-muted">The preview is the draft. Publishing updates the shop host.</p>
         </div>
       </div>
       <div v-if="shopUrl" class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        <a class="font-medium text-rust" :href="shopUrl.subdomain" target="_blank" rel="noreferrer">Open shop</a>
-        <a class="text-stone-500" :href="shopUrl.path" target="_blank" rel="noreferrer">Same-host preview</a>
+        <a class="font-medium text-text underline" :href="shopUrl.subdomain" target="_blank" rel="noreferrer">Open shop</a>
+        <a class="text-muted underline" :href="shopUrl.path" target="_blank" rel="noreferrer">Same-host preview</a>
       </div>
-      <p v-if="error" class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
-      <p v-if="note" class="rounded-xl bg-card px-3 py-2 text-sm text-stone-700">{{ note }}</p>
-      <textarea v-model="prompt" :class="controlClass" rows="3" />
+      <p v-if="error" class="rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
+      <p v-if="note" class="rounded border border-border bg-surface px-3 py-2 text-sm text-text">{{ note }}</p>
+      <textarea v-model="prompt" :class="[controlClass, '!h-auto py-2']" rows="3" />
       <div class="flex flex-wrap gap-2">
-        <button v-for="example in examples" :key="example.label" type="button" class="rounded-full border border-line bg-white px-3 py-1 text-xs text-stone-600" @click="prompt = example.prompt">{{ example.label }}</button>
+        <button v-for="example in examples" :key="example.label" type="button" class="rounded border border-border bg-surface px-3 py-1 text-sm text-text hover:bg-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" @click="prompt = example.prompt">{{ example.label }}</button>
       </div>
       <div class="flex flex-wrap gap-2">
         <Button :loading="busy === 'generate'" @click="run('generate')">Generate</Button>
@@ -173,23 +173,23 @@ function move(index: number, direction: number) {
         <Button variant="secondary" :loading="busy === 'publish'" @click="publish">Publish</Button>
       </div>
 
-      <div class="grid grid-cols-3 rounded-xl border border-line bg-white p-1 text-sm">
-        <button v-for="item in (['look', 'page', 'sections'] as const)" :key="item" type="button" class="rounded-lg px-2 py-1.5 capitalize" :class="panel === item ? 'bg-ink text-white' : 'text-stone-600'" @click="panel = item">{{ item }}</button>
+      <div class="grid grid-cols-3 gap-1 rounded border border-border bg-surface p-1 text-sm">
+        <button v-for="item in (['look', 'page', 'sections'] as const)" :key="item" type="button" class="rounded border px-2 py-1.5 text-sm capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :class="panel === item ? 'border-text bg-text text-white' : 'border-border bg-surface text-text hover:bg-bg'" @click="panel = item">{{ item }}</button>
       </div>
 
       <div v-if="panel === 'look'" class="space-y-3">
         <div class="flex flex-wrap gap-2">
-          <button v-for="name in Object.keys(themePresets)" :key="name" type="button" class="rounded-full border px-3 py-1 text-xs capitalize" :class="draft.theme.name === name ? 'border-ink bg-ink text-white' : 'border-line bg-white text-stone-600'" @click="pickTheme(name)">{{ name }}</button>
+          <button v-for="name in Object.keys(themePresets)" :key="name" type="button" class="rounded border px-3 py-1 text-sm capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :class="draft.theme.name === name ? 'border-text bg-text text-white' : 'border-border bg-surface text-text hover:bg-bg'" @click="pickTheme(name)">{{ name }}</button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <label class="text-xs text-stone-500">Images
+          <label class="text-xs text-muted">Images
             <select v-model="draft.theme.imageRatio" :class="controlClass" class="mt-1">
               <option value="square">Square</option>
               <option value="portrait">Portrait</option>
               <option value="landscape">Landscape</option>
             </select>
           </label>
-          <label class="text-xs text-stone-500">Corners
+          <label class="text-xs text-muted">Corners
             <select v-model="draft.theme.radius" :class="controlClass" class="mt-1">
               <option value="none">Sharp</option>
               <option value="sm">Small</option>
@@ -197,17 +197,17 @@ function move(index: number, direction: number) {
               <option value="lg">Large</option>
             </select>
           </label>
-          <label class="text-xs text-stone-500">Heading
+          <label class="text-xs text-muted">Heading
             <select v-model="draft.theme.fontHeading" :class="controlClass" class="mt-1"><option v-for="font in fonts" :key="font">{{ font }}</option></select>
           </label>
-          <label class="text-xs text-stone-500">Body
+          <label class="text-xs text-muted">Body
             <select v-model="draft.theme.fontBody" :class="controlClass" class="mt-1"><option v-for="font in fonts" :key="font">{{ font }}</option></select>
           </label>
         </div>
         <div class="grid grid-cols-4 gap-2">
-          <label v-for="key in colorKeys" :key="key" class="text-[10px] uppercase tracking-wide text-stone-500">
+          <label v-for="key in colorKeys" :key="key" class="text-xs text-muted">
             {{ key }}
-            <input :value="colorValue(key)" type="color" class="mt-1 h-8 w-full cursor-pointer rounded border border-line bg-white" @input="onColor(key, $event)" />
+            <input :value="colorValue(key)" type="color" class="mt-1 h-8 w-full cursor-pointer rounded border border-border bg-surface" @input="onColor(key, $event)" />
           </label>
         </div>
       </div>
@@ -219,32 +219,32 @@ function move(index: number, direction: number) {
           <option value="left">Logo on the left</option>
           <option value="center">Centered header</option>
         </select>
-        <label v-for="item in draft.header.nav" :key="item.target" class="block text-xs capitalize text-stone-500">{{ item.target }}
+        <label v-for="item in draft.header.nav" :key="item.target" class="block text-xs capitalize text-muted">{{ item.target }}
           <input v-model="item.label" :class="controlClass" class="mt-1" />
         </label>
-        <label class="block text-xs text-stone-500">Footer
+        <label class="block text-xs text-muted">Footer
           <input v-model="draft.footer.text" :class="controlClass" class="mt-1" />
         </label>
       </div>
 
       <div v-else class="space-y-3">
         <ul class="space-y-2">
-          <li v-for="(item, index) in draft.sections" :key="item.id" class="rounded-xl border bg-card p-3" :class="selected === index ? 'border-rust' : 'border-line'">
+          <li v-for="(item, index) in draft.sections" :key="item.id" class="rounded border bg-surface p-3" :class="selected === index ? 'border-text' : 'border-border'">
             <button class="flex w-full items-center justify-between text-left text-sm" type="button" @click="selected = index">
               <span class="capitalize">{{ item.type.replaceAll('_', ' ') }}</span>
-              <span class="text-xs text-stone-500">{{ item.visible ? 'Shown' : 'Hidden' }}</span>
+              <span class="text-xs text-muted">{{ item.visible ? 'Shown' : 'Hidden' }}</span>
             </button>
-            <div class="mt-2 flex gap-3 text-xs">
-              <button type="button" @click="item.visible = !item.visible">{{ item.visible ? 'Hide' : 'Show' }}</button>
-              <button type="button" :disabled="index === 0" @click="move(index, -1)">Up</button>
-              <button type="button" :disabled="index === draft.sections.length - 1" @click="move(index, 1)">Down</button>
+            <div class="mt-2 flex gap-3 text-xs text-muted">
+              <button type="button" class="hover:text-text" @click="item.visible = !item.visible">{{ item.visible ? 'Hide' : 'Show' }}</button>
+              <button type="button" class="hover:text-text disabled:opacity-40" :disabled="index === 0" @click="move(index, -1)">Up</button>
+              <button type="button" class="hover:text-text disabled:opacity-40" :disabled="index === draft.sections.length - 1" @click="move(index, 1)">Down</button>
             </div>
           </li>
         </ul>
         <div v-if="section?.hero" class="space-y-2">
           <input v-model="section.hero.eyebrow" :class="controlClass" placeholder="Eyebrow" />
           <input v-model="section.hero.headline" :class="controlClass" placeholder="Headline" />
-          <textarea v-model="section.hero.subheadline" :class="controlClass" rows="2" placeholder="Subheadline" />
+          <textarea v-model="section.hero.subheadline" :class="[controlClass, '!h-auto py-2']" rows="2" placeholder="Subheadline" />
           <input v-model="section.hero.ctaLabel" :class="controlClass" placeholder="Button label" />
           <select v-model="section.hero.ctaTarget" :class="controlClass"><option value="products">Shop</option><option value="about">About</option><option value="cart">Cart</option><option value="home">Home</option></select>
           <div class="grid grid-cols-2 gap-2">
@@ -256,36 +256,36 @@ function move(index: number, direction: number) {
         <div v-else-if="section?.productGrid" class="space-y-2">
           <input v-model="section.productGrid.title" :class="controlClass" placeholder="Title" />
           <select v-model.number="section.productGrid.columns" :class="controlClass"><option :value="2">2 columns</option><option :value="3">3 columns</option><option :value="4">4 columns</option></select>
-          <label class="block text-xs text-stone-500">Products shown
+          <label class="block text-xs text-muted">Products shown
             <input v-model.number="section.productGrid.limit" :class="controlClass" class="mt-1" type="number" min="1" max="24" />
           </label>
         </div>
         <div v-else-if="section?.featured" class="space-y-2">
           <input v-model="section.featured.title" :class="controlClass" placeholder="Title" />
-          <label class="block text-xs text-stone-500">Products shown
+          <label class="block text-xs text-muted">Products shown
             <input v-model.number="section.featured.limit" :class="controlClass" class="mt-1" type="number" min="1" max="8" />
           </label>
         </div>
         <div v-else-if="section?.about" class="space-y-2">
           <input v-model="section.about.title" :class="controlClass" placeholder="Title" />
-          <textarea v-model="section.about.body" :class="controlClass" rows="4" placeholder="About the shop" />
+          <textarea v-model="section.about.body" :class="[controlClass, '!h-auto py-2']" rows="4" placeholder="About the shop" />
           <input v-model="section.about.imageUrl" :class="controlClass" placeholder="Image URL" />
         </div>
         <div v-else-if="section?.announcement"><input v-model="section.announcement.text" :class="controlClass" placeholder="Announcement" /></div>
         <div v-else-if="section?.categories"><input v-model="section.categories.title" :class="controlClass" placeholder="Title" /></div>
         <div v-else-if="section?.newsletter" class="space-y-2">
           <input v-model="section.newsletter.title" :class="controlClass" placeholder="Title" />
-          <textarea v-model="section.newsletter.text" :class="controlClass" rows="2" />
-          <p class="text-xs text-stone-500">Copy only. This does not collect email addresses.</p>
+          <textarea v-model="section.newsletter.text" :class="[controlClass, '!h-auto py-2']" rows="2" />
+          <p class="text-xs text-muted">Copy only. This does not collect email addresses.</p>
         </div>
       </div>
     </div>
     <div class="xl:sticky xl:top-4">
-      <div class="mb-2 flex justify-end gap-2 text-xs">
-        <button type="button" class="rounded-full border px-3 py-1" :class="frame === 'full' ? 'border-ink bg-ink text-white' : 'border-line bg-white'" @click="frame = 'full'">Desktop</button>
-        <button type="button" class="rounded-full border px-3 py-1" :class="frame === 'phone' ? 'border-ink bg-ink text-white' : 'border-line bg-white'" @click="frame = 'phone'">Phone</button>
+      <div class="mb-2 flex justify-end gap-2">
+        <button type="button" class="rounded border px-3 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :class="frame === 'full' ? 'border-text bg-text text-white' : 'border-border bg-surface text-text hover:bg-bg'" @click="frame = 'full'">Desktop</button>
+        <button type="button" class="rounded border px-3 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :class="frame === 'phone' ? 'border-text bg-text text-white' : 'border-border bg-surface text-text hover:bg-bg'" @click="frame = 'phone'">Phone</button>
       </div>
-      <div class="overflow-hidden rounded-2xl border border-line bg-white" :class="frame === 'phone' ? 'mx-auto max-w-[390px]' : ''">
+      <div class="overflow-hidden rounded border border-border bg-surface" :class="frame === 'phone' ? 'mx-auto max-w-[390px]' : ''">
         <div class="max-h-[calc(100vh-5rem)] overflow-auto">
           <StorefrontView :store="previewStore" :products="products" :collections="collections" :paths="storePaths(shop.shop.slug)" :interactive="false" :compact="frame === 'phone'" />
         </div>

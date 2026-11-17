@@ -44,14 +44,14 @@ async function save() {
 <template>
   <div v-if="order">
     <PageHeader :title="order.customer.name" :subtitle="`Cash on delivery · ${formatMoney(order.totalCents, shop.shop?.currency)}`" />
-    <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
+    <p v-if="error" class="mb-4 rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
     <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-      <section class="rounded-2xl border border-line bg-card p-4">
+      <section class="overflow-x-auto rounded border border-border bg-surface p-4">
         <table class="w-full text-left text-sm">
-          <thead class="text-xs uppercase tracking-wide text-stone-500"><tr><th class="py-2">Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+          <thead class="border-b border-border text-xs font-medium text-muted"><tr><th class="py-2 font-medium">Item</th><th class="font-medium">Qty</th><th class="font-medium">Price</th><th class="font-medium">Total</th></tr></thead>
           <tbody>
-            <tr v-for="item in order.items" :key="item.productId + item.sku" class="border-t border-line">
-              <td class="py-3">{{ item.name }}<span v-if="item.optionLabel" class="block text-xs text-stone-500">{{ item.optionLabel }}</span><span class="block text-xs text-stone-500">{{ item.sku }}</span></td>
+            <tr v-for="item in order.items" :key="item.productId + item.sku" class="border-b border-border last:border-0">
+              <td class="py-3">{{ item.name }}<span v-if="item.optionLabel" class="block text-xs text-muted">{{ item.optionLabel }}</span><span class="block text-xs text-muted">{{ item.sku }}</span></td>
               <td>{{ item.quantity }}</td>
               <td>{{ formatMoney(item.unitPriceCents, shop.shop?.currency) }}</td>
               <td>{{ formatMoney(item.lineTotalCents, shop.shop?.currency) }}</td>
@@ -59,20 +59,20 @@ async function save() {
           </tbody>
         </table>
       </section>
-      <section class="space-y-3 rounded-2xl border border-line bg-card p-4 text-sm">
+      <section class="space-y-3 rounded border border-border bg-surface p-4 text-sm">
         <p>{{ order.customer.email }}</p>
         <p v-if="order.customer.phone">{{ order.customer.phone }}</p>
         <p>{{ order.customer.address }}<br />{{ order.customer.city }}</p>
-        <p v-if="order.customer.notes" class="text-stone-600">{{ order.customer.notes }}</p>
-        <label class="block text-xs uppercase tracking-wide text-stone-500">Status
+        <p v-if="order.customer.notes" class="text-muted">{{ order.customer.notes }}</p>
+        <label class="block text-sm font-medium text-text">Status
           <select v-model="status" :class="controlClass" class="mt-1" :disabled="order.status === 'cancelled'">
             <option v-for="option in statuses" :key="option" :value="option">{{ option }}</option>
           </select>
         </label>
-        <p v-if="order.status === 'cancelled'" class="text-xs text-stone-500">This order is closed. Stock was returned for products that still exist.</p>
+        <p v-if="order.status === 'cancelled'" class="text-xs text-muted">This order is closed. Stock was returned for products that still exist.</p>
         <Button :disabled="order.status === 'cancelled'" :loading="loading" @click="save">Update status</Button>
       </section>
     </div>
   </div>
-  <p v-else class="text-sm text-stone-500">{{ error || 'Loading order…' }}</p>
+  <p v-else class="text-sm text-muted">{{ error || 'Loading order…' }}</p>
 </template>

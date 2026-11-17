@@ -3,10 +3,10 @@ defineProps<{ title: string; subtitle?: string }>()
 </script>
 
 <template>
-  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="font-serif text-3xl tracking-tight text-ink md:text-4xl">{{ title }}</h1>
-      <p v-if="subtitle" class="mt-1 max-w-2xl text-sm text-stone-600">{{ subtitle }}</p>
+      <h1 class="text-lg font-semibold leading-6 text-text">{{ title }}</h1>
+      <p v-if="subtitle" class="mt-1 max-w-2xl text-sm text-muted">{{ subtitle }}</p>
     </div>
     <slot />
   </div>

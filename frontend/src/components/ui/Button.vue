@@ -13,10 +13,10 @@ withDefaults(
 )
 
 const styles = {
-  primary: 'bg-rust text-white hover:bg-orange-800',
-  secondary: 'border border-line bg-white text-ink hover:bg-stone-50',
-  ghost: 'text-stone-600 hover:bg-stone-200/60',
-  danger: 'bg-red-800 text-white hover:bg-red-900',
+  primary: 'bg-accent text-white hover:bg-accent-hover',
+  secondary: 'border border-border bg-surface text-text hover:bg-bg',
+  ghost: 'text-text hover:bg-bg',
+  danger: 'bg-danger text-white hover:bg-danger-hover',
 }
 </script>
 
@@ -26,7 +26,7 @@ const styles = {
     :to="to"
     :type="to ? undefined : type"
     :disabled="to ? undefined : disabled || loading"
-    class="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+    class="inline-flex h-8 items-center justify-center gap-2 rounded px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
     :class="[styles[variant], (disabled || loading) && to ? 'pointer-events-none opacity-50' : '']"
   >
     <span v-if="loading" class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" />

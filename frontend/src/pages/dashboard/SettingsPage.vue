@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
 import Field from '@/components/ui/Field.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import { controlClass } from '@/components/ui/control'
+import { controlClass, textareaClass } from '@/components/ui/control'
 import { publicUrl } from '@/features/stores/host'
 import { publishStore, unpublishStore, updateStore } from '@/features/stores/api'
 import { useShopStore } from '@/stores/shop'
@@ -60,12 +60,12 @@ async function toggle() {
 <template>
   <div class="max-w-2xl">
     <PageHeader title="Store settings" subtitle="Customers use the shop subdomain. This dashboard stays on the main domain." />
-    <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
-    <p v-if="message" class="mb-4 rounded-xl bg-lime-50 px-3 py-2 text-sm text-lime-900">{{ message }}</p>
-    <form v-if="shop.shop" class="space-y-4 rounded-2xl border border-line bg-card p-5" @submit.prevent="save">
+    <p v-if="error" class="mb-4 rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
+    <p v-if="message" class="mb-4 rounded bg-good-bg px-3 py-2 text-sm text-good-fg">{{ message }}</p>
+    <form v-if="shop.shop" class="space-y-4 rounded border border-border bg-surface p-4" @submit.prevent="save">
       <Field label="Store name"><input v-model="name" :class="controlClass" required /></Field>
       <Field label="Address"><input v-model="slug" :class="controlClass" required /></Field>
-      <Field label="Description"><textarea v-model="description" :class="controlClass" rows="4" /></Field>
+      <Field label="Description"><textarea v-model="description" :class="textareaClass" rows="4" /></Field>
       <Field label="Logo URL"><input v-model="logoUrl" :class="controlClass" placeholder="https://" /></Field>
       <Field label="Currency">
         <select v-model="currency" :class="controlClass">
@@ -74,9 +74,9 @@ async function toggle() {
           <option>GBP</option>
         </select>
       </Field>
-      <div class="rounded-xl bg-paper p-3 text-sm text-stone-600">
-        <p>Shop: <a class="font-medium text-ink underline" :href="publicUrl(shop.shop.slug).subdomain" target="_blank" rel="noreferrer">{{ publicUrl(shop.shop.slug).subdomain }}</a></p>
-        <p class="mt-1">Same-host preview: <a class="font-medium text-ink underline" :href="publicUrl(shop.shop.slug).path" target="_blank" rel="noreferrer">{{ publicUrl(shop.shop.slug).path }}</a></p>
+      <div class="rounded border border-border bg-bg p-3 text-sm text-muted">
+        <p>Shop: <a class="font-medium text-text underline" :href="publicUrl(shop.shop.slug).subdomain" target="_blank" rel="noreferrer">{{ publicUrl(shop.shop.slug).subdomain }}</a></p>
+        <p class="mt-1">Same-host preview: <a class="font-medium text-text underline" :href="publicUrl(shop.shop.slug).path" target="_blank" rel="noreferrer">{{ publicUrl(shop.shop.slug).path }}</a></p>
       </div>
       <div class="flex flex-wrap gap-2">
         <Button type="submit" :loading="loading">Save settings</Button>

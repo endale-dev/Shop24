@@ -19,13 +19,13 @@ const ctx = inject(storefrontKey)
         </div>
         <div class="flex items-center gap-3">
           <input :value="line.quantity" type="number" min="1" :max="line.stock" class="w-16 border bg-transparent px-2 py-1" :style="{ borderColor: 'var(--sf-border)' }" @change="ctx.cart.value.setQuantity(line.productId, line.variantId || '', Number(($event.target as HTMLInputElement).value))" />
-          <button type="button" class="text-sm" @click="ctx.cart.value.remove(line.productId, line.variantId || '')">Remove</button>
+          <button type="button" class="text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]" @click="ctx.cart.value.remove(line.productId, line.variantId || '')">Remove</button>
         </div>
       </li>
     </ul>
     <div v-if="ctx.cart.value.lines.value.length" class="mt-6 flex items-center justify-between">
       <p class="text-lg">{{ formatMoney(ctx.cart.value.subtotal.value, ctx.store.value.currency) }}</p>
-      <RouterLink class="px-5 py-2 text-sm font-semibold" :to="ctx.paths.value.checkout" :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }">Checkout</RouterLink>
+      <RouterLink class="px-5 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]" :to="ctx.paths.value.checkout" :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }">Checkout</RouterLink>
     </div>
   </div>
 </template>

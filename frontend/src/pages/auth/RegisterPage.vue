@@ -31,14 +31,14 @@ async function submit() {
 <template>
   <form class="space-y-4" @submit.prevent="submit">
     <div>
-      <h1 class="font-serif text-4xl">Create your account</h1>
-      <p class="mt-1 text-sm text-stone-600">One login, one store, a catalog you can publish.</p>
+      <h1 class="text-lg font-semibold leading-6 text-text">Create account</h1>
+      <p class="mt-1 text-sm text-muted">This creates the seller login.</p>
     </div>
-    <p v-if="error" class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
+    <p v-if="error" class="rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
     <Field label="Name"><input v-model="name" :class="controlClass" required minlength="2" /></Field>
     <Field label="Email"><input v-model="email" :class="controlClass" type="email" autocomplete="email" required /></Field>
     <Field label="Password" hint="At least 8 characters."><input v-model="password" :class="controlClass" type="password" autocomplete="new-password" required minlength="8" /></Field>
     <Button type="submit" :loading="loading" class="w-full">Create account</Button>
-    <p class="text-sm text-stone-600">Already selling? <RouterLink class="font-semibold text-rust" to="/login">Sign in</RouterLink></p>
+    <p class="text-sm text-muted">Already selling? <RouterLink class="text-sm font-medium text-text underline" to="/login">Sign in</RouterLink></p>
   </form>
 </template>

@@ -4,9 +4,9 @@ defineProps<{ label: string; hint?: string; error?: string }>()
 
 <template>
   <label class="block">
-    <span class="mb-1.5 block text-sm font-medium text-stone-700">{{ label }}</span>
+    <span class="mb-1.5 block text-sm font-medium text-text">{{ label }}</span>
     <slot />
-    <p v-if="hint" class="mt-1 text-xs text-stone-500">{{ hint }}</p>
-    <p v-if="error" class="mt-1 text-sm text-red-700">{{ error }}</p>
+    <p v-if="hint" class="mt-1 text-xs text-muted">{{ hint }}</p>
+    <p v-if="error" class="mt-1 text-sm text-bad-fg">{{ error }}</p>
   </label>
 </template>

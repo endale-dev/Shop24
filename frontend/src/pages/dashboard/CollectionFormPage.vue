@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
 import Field from '@/components/ui/Field.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import { controlClass } from '@/components/ui/control'
+import { controlClass, textareaClass } from '@/components/ui/control'
 import { createCollection, getCollection, updateCollection } from '@/features/collections/api'
 import { listProducts } from '@/features/products/api'
 import type { Product } from '@/types'
@@ -101,21 +101,21 @@ async function submit() {
 <template>
   <form class="max-w-2xl" @submit.prevent="submit">
     <PageHeader :title="id ? 'Edit collection' : 'New collection'" subtitle="One image, a short address, and the products you put in it." />
-    <p v-if="error" class="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
-    <div class="space-y-4 rounded-2xl border border-line bg-card p-5">
+    <p v-if="error" class="mb-4 rounded bg-bad-bg px-3 py-2 text-sm text-bad-fg">{{ error }}</p>
+    <div class="space-y-4 rounded border border-border bg-surface p-4">
       <Field label="Name"><input :value="name" :class="controlClass" required @input="onName(($event.target as HTMLInputElement).value)" /></Field>
       <Field label="Address" hint="Shown as /c/this-address"><input v-model="slug" :class="controlClass" required @input="slugTouched = true" /></Field>
-      <Field label="Description"><textarea v-model="description" :class="controlClass" rows="3" /></Field>
+      <Field label="Description"><textarea v-model="description" :class="textareaClass" rows="3" /></Field>
       <Field label="Image URL"><input v-model="imageUrl" :class="controlClass" placeholder="https://" /></Field>
       <div>
-        <p class="mb-2 text-sm font-medium">Products</p>
-        <p v-if="products.length === 0" class="text-sm text-stone-500">Add a product before filling a collection.</p>
-        <ul v-else class="divide-y divide-line rounded-xl border border-line">
+        <p class="mb-2 text-sm font-semibold text-text">Products</p>
+        <p v-if="products.length === 0" class="text-sm text-muted">Add a product before filling a collection.</p>
+        <ul v-else class="divide-y divide-border rounded border border-border">
           <li v-for="product in ordered" :key="product.id" class="flex items-center gap-3 px-3 py-2 text-sm">
             <input :checked="productIds.includes(product.id)" type="checkbox" @change="toggle(product.id)" />
             <span class="min-w-0 flex-1 truncate">{{ product.name }}</span>
-            <button v-if="productIds.includes(product.id)" class="text-xs text-stone-500" type="button" @click="move(product.id, -1)">Up</button>
-            <button v-if="productIds.includes(product.id)" class="text-xs text-stone-500" type="button" @click="move(product.id, 1)">Down</button>
+            <button v-if="productIds.includes(product.id)" class="text-xs text-muted hover:text-text" type="button" @click="move(product.id, -1)">Up</button>
+            <button v-if="productIds.includes(product.id)" class="text-xs text-muted hover:text-text" type="button" @click="move(product.id, 1)">Down</button>
           </li>
         </ul>
       </div>

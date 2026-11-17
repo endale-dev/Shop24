@@ -47,7 +47,7 @@ watch(
     </div>
     <div v-if="products.length === 0" class="mt-10 text-sm" :style="{ color: 'var(--sf-muted)' }">Nothing in this collection is published yet.</div>
     <div v-else class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      <RouterLink v-for="product in products" :key="product.id" :to="ctx.paths.value.product(product.id)" class="group block">
+      <RouterLink v-for="product in products" :key="product.id" :to="ctx.paths.value.product(product.id)" class="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]">
         <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
           <img v-if="product.images[0]" :src="product.images[0]" :alt="product.name" class="aspect-square w-full object-cover" />
           <div v-else class="grid aspect-square place-items-center text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ product.name.slice(0, 1) }}</div>
