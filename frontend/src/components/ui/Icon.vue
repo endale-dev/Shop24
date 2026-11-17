@@ -1,6 +1,32 @@
 <script setup lang="ts">
 defineProps<{
-  name: 'grid' | 'box' | 'layers' | 'clipboard' | 'panel' | 'gear' | 'plus' | 'menu' | 'x' | 'logout' | 'inbox' | 'cart'
+  name:
+    | 'grid'
+    | 'box'
+    | 'layers'
+    | 'clipboard'
+    | 'panel'
+    | 'gear'
+    | 'plus'
+    | 'menu'
+    | 'x'
+    | 'logout'
+    | 'inbox'
+    | 'cart'
+    | 'sidebar'
+    | 'monitor'
+    | 'phone'
+    | 'wand'
+    | 'pencil'
+    | 'save'
+    | 'external'
+    | 'eye'
+    | 'eye-off'
+    | 'palette'
+    | 'page'
+    | 'chevron-up'
+    | 'chevron-down'
+    | 'send'
 }>()
 </script>
 
@@ -72,6 +98,72 @@ defineProps<{
       <circle cx="8" cy="21" r="1" />
       <circle cx="19" cy="21" r="1" />
       <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+    </template>
+    <template v-else-if="name === 'sidebar'">
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 3v18" />
+    </template>
+    <template v-else-if="name === 'monitor'">
+      <rect width="20" height="14" x="2" y="3" rx="2" />
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+    </template>
+    <template v-else-if="name === 'phone'">
+      <rect width="14" height="20" x="5" y="2" rx="2" />
+      <path d="M12 18h.01" />
+    </template>
+    <template v-else-if="name === 'wand'">
+      <path d="m15 4-8.5 8.5a2.1 2.1 0 0 0 0 3L8 17l1.5 1.5a2.1 2.1 0 0 0 3 0L21 10" />
+      <path d="m14 5 5 5" />
+      <path d="M19 3v4" />
+      <path d="M21 5h-4" />
+    </template>
+    <template v-else-if="name === 'pencil'">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </template>
+    <template v-else-if="name === 'save'">
+      <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
+      <path d="M7 3v4a1 1 0 0 0 1 1h7" />
+    </template>
+    <template v-else-if="name === 'external'">
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </template>
+    <template v-else-if="name === 'eye'">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </template>
+    <template v-else-if="name === 'eye-off'">
+      <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+      <path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+      <path d="m2 2 20 20" />
+    </template>
+    <template v-else-if="name === 'palette'">
+      <path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4a2 2 0 0 0 2-1.8A10 10 0 0 0 12 2Z" />
+      <circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="7" r="1" fill="currentColor" stroke="none" />
+      <circle cx="17" cy="11" r="1" fill="currentColor" stroke="none" />
+    </template>
+    <template v-else-if="name === 'page'">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M8 13h8" />
+      <path d="M8 17h5" />
+    </template>
+    <template v-else-if="name === 'chevron-up'">
+      <path d="m18 15-6-6-6 6" />
+    </template>
+    <template v-else-if="name === 'chevron-down'">
+      <path d="m6 9 6 6 6-6" />
+    </template>
+    <template v-else-if="name === 'send'">
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
     </template>
   </svg>
 </template>

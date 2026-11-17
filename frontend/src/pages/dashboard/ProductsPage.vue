@@ -68,22 +68,28 @@ onMounted(load)
       <Button to="/products/new"><Icon name="plus" /> Add a product</Button>
     </EmptyState>
     <div v-else class="overflow-x-auto rounded border border-border bg-surface">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-border text-xs font-medium text-muted">
-          <tr><th class="px-4 py-3 font-medium">Product</th><th class="px-4 py-3 font-medium">Price</th><th class="px-4 py-3 font-medium">Stock</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium"></th></tr>
+      <table class="w-full border-separate border-spacing-0 text-left text-sm">
+        <thead>
+          <tr>
+            <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Product</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-right text-xs font-medium text-muted">Price</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-right text-xs font-medium text-muted">Stock</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Status</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted"><span class="sr-only">Actions</span></th>
+          </tr>
         </thead>
         <tbody>
-          <tr v-for="product in items" :key="product.id" class="border-b border-border last:border-0 hover:bg-bg">
-            <td class="px-4 py-3">
-              <p class="font-medium">{{ product.name }}</p>
+          <tr v-for="product in items" :key="product.id" class="hover:bg-bg">
+            <td class="border-b border-border px-3 py-2 align-middle">
+              <RouterLink class="font-medium hover:underline" :to="`/products/${product.id}`">{{ product.name }}</RouterLink>
               <p class="text-xs text-muted">{{ product.variants?.length > 1 ? `${product.variants.length} versions` : product.sku }}<span v-if="product.category"> · {{ product.category }}</span></p>
             </td>
-            <td class="px-4 py-3">{{ priceVaries(product) ? 'From ' : '' }}{{ formatMoney(product.priceCents, shop.shop?.currency) }}</td>
-            <td class="px-4 py-3"><Badge :tone="product.stock === 0 ? 'bad' : product.lowStock ? 'warn' : 'good'">{{ product.stock }}</Badge></td>
-            <td class="px-4 py-3">{{ product.published ? 'Published' : 'Draft' }}</td>
-            <td class="px-4 py-3 text-right">
-              <RouterLink class="mr-3 text-text underline" :to="`/products/${product.id}`">Edit</RouterLink>
-              <button class="text-muted hover:text-danger" type="button" @click="pendingDelete = product">Delete</button>
+            <td class="border-b border-border px-3 py-2 text-right align-middle tabular-nums">{{ priceVaries(product) ? 'From ' : '' }}{{ formatMoney(product.priceCents, shop.shop?.currency) }}</td>
+            <td class="border-b border-border px-3 py-2 text-right align-middle tabular-nums"><Badge :tone="product.stock === 0 ? 'bad' : product.lowStock ? 'warn' : 'good'">{{ product.stock }}</Badge></td>
+            <td class="border-b border-border px-3 py-2 align-middle"><Badge :tone="product.published ? 'good' : 'neutral'">{{ product.published ? 'Published' : 'Draft' }}</Badge></td>
+            <td class="whitespace-nowrap border-b border-border px-3 py-2 text-right align-middle">
+              <RouterLink class="underline" :to="`/products/${product.id}`">Edit</RouterLink>
+              <button class="ml-3 text-danger hover:underline" type="button" @click="pendingDelete = product">Delete</button>
             </td>
           </tr>
         </tbody>

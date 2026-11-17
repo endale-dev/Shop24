@@ -61,6 +61,24 @@ func TestMockRefineKeepsCopy(t *testing.T) {
 	}
 }
 
+func TestMockChangesStructure(t *testing.T) {
+	cfg := storefront.Default("North", "Wool")
+	result, err := NewMock().Refine(context.Background(),
+		"Use a full-bleed hero, show products as a list, outline buttons, and hide the collections.",
+		cfg, StoreContext{Name: "North"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	theme := result.Config.Theme
+	if theme.HeroLayout != "bleed" || theme.ProductDisplay != "list" || theme.Buttons != "outline" || theme.Collections != "hidden" {
+		t.Fatalf("layout = %+v", theme)
+	}
+	if !strings.Contains(result.Summary, "full-bleed") {
+		t.Fatal(result.Summary)
+	}
+}
+
 func TestMockMovesFeaturedAboveAbout(t *testing.T) {
 	cfg := storefront.Default("North", "Wool")
 	result, err := NewMock().Refine(context.Background(), "Move the featured products above the about section.", cfg, StoreContext{Name: "North"})

@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import Icon from '@/components/ui/Icon.vue'
 import { formatMoney } from '@/features/money'
 import { priceVaries } from '@/features/products/api'
-import type { Collection, Product, PublicStore, Section } from '@/types'
+import type { Collection, HeroProps, Product, PublicStore, Section } from '@/types'
 
 const props = withDefaults(
   defineProps<{
@@ -44,6 +44,59 @@ const frame = computed(() => {
     '--sf-heading': `"${theme.fontHeading}", Georgia, serif`,
   }
 })
+
+const layout = computed(() => {
+  const theme = config.value.theme
+  const one = (value: string | undefined, allowed: string[], fallback: string) => (value && allowed.includes(value) ? value : fallback)
+  return {
+    density: one(theme.density, ['tight', 'regular', 'roomy'], 'regular'),
+    buttons: one(theme.buttons, ['fill', 'outline', 'link'], 'fill'),
+    cards: one(theme.cards, ['flat', 'border', 'shadow'], 'flat'),
+    collections: one(theme.collections, ['strip', 'feature', 'hidden'], 'strip'),
+    heroLayout: one(theme.heroLayout, ['stack', 'split', 'bleed'], 'split'),
+    productDisplay: one(theme.productDisplay, ['grid', 'feature', 'list'], 'grid'),
+  }
+})
+
+function sectionPad() {
+  if (layout.value.density === 'tight') return 'py-6'
+  if (layout.value.density === 'roomy') return 'py-16 md:py-20'
+  return 'py-12'
+}
+
+function buttonStyle(onPrimary = false) {
+  const radius = { borderRadius: 'var(--sf-radius)' }
+  if (layout.value.buttons === 'outline') {
+    return { ...radius, background: 'transparent', color: onPrimary ? 'var(--sf-on)' : 'var(--sf-primary)', border: `1px solid ${onPrimary ? 'var(--sf-on)' : 'var(--sf-primary)'}` }
+  }
+  if (layout.value.buttons === 'link') {
+    return { background: 'transparent', color: onPrimary ? 'var(--sf-on)' : 'var(--sf-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }
+  }
+  if (onPrimary) return { ...radius, background: 'var(--sf-on)', color: 'var(--sf-primary)' }
+  return { ...radius, background: 'var(--sf-primary)', color: 'var(--sf-on)' }
+}
+
+function cardStyle() {
+  const style: Record<string, string> = { background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }
+  if (layout.value.cards === 'border') style.border = '1px solid var(--sf-border)'
+  if (layout.value.cards === 'shadow') style.boxShadow = '0 12px 28px color-mix(in srgb, var(--sf-text) 10%, transparent)'
+  return style
+}
+
+function heroBand(hero: HeroProps) {
+  if (layout.value.heroLayout !== 'bleed') return {}
+  if (hero.imageUrl) {
+    return { backgroundImage: `url("${hero.imageUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+  }
+  return { background: 'var(--sf-primary)', color: 'var(--sf-on)' }
+}
+
+function heroGrid(hero: HeroProps) {
+  if (layout.value.heroLayout === 'bleed') return 'relative z-[1]'
+  if (layout.value.heroLayout === 'stack') return ''
+  if (hero.imageUrl && !props.compact) return 'md:grid-cols-2'
+  return ''
+}
 
 function hrefFor(target: string) {
   if (target === 'cart') return props.paths.cart
@@ -131,35 +184,36 @@ function headerClass() {
     </header>
 
     <main v-if="showSections">
-      <section v-if="collections.length" class="mx-auto max-w-6xl px-4 pt-8 sm:pt-10">
+      <section v-if="collections.length && layout.collections !== 'hidden'" class="mx-auto max-w-6xl px-4" :class="sectionPad()">
         <h2 class="mb-4 text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">Collections</h2>
-        <div class="grid gap-4" :class="compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'">
-          <component :is="interactive ? RouterLink : 'div'" v-for="item in collections" :key="item.id" :to="paths.collection(item.slug)" class="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]">
-            <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
-              <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" class="aspect-[4/3] w-full object-cover" />
-              <div v-else class="grid aspect-[4/3] place-items-center text-3xl" :style="{ fontFamily: 'var(--sf-heading)', color: 'var(--sf-muted)' }">{{ item.name.slice(0, 1) }}</div>
+        <div class="grid gap-4" :class="compact ? 'grid-cols-1' : layout.collections === 'feature' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3'">
+          <component :is="interactive ? RouterLink : 'div'" v-for="(item, index) in collections" :key="item.id" :to="paths.collection(item.slug)" class="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]" :class="index === 0 && layout.collections === 'feature' && !compact ? 'sm:col-span-2' : ''">
+            <div class="overflow-hidden" :style="cardStyle()">
+              <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" class="w-full object-cover" :class="index === 0 && layout.collections === 'feature' ? 'aspect-[16/9]' : 'aspect-[4/3]'" />
+              <div v-else class="grid place-items-center text-3xl" :class="index === 0 && layout.collections === 'feature' ? 'aspect-[16/9]' : 'aspect-[4/3]'" :style="{ fontFamily: 'var(--sf-heading)', color: 'var(--sf-muted)' }">{{ item.name.slice(0, 1) }}</div>
             </div>
             <h3 class="mt-3 text-base font-medium">{{ item.name }}</h3>
           </component>
         </div>
       </section>
       <template v-for="section in config.sections" :key="section.id">
-        <section v-if="section.visible && section.type === 'hero' && section.hero" :class="heroSize(section.hero.size)">
-          <div class="mx-auto grid max-w-6xl items-center gap-8 px-4" :class="section.hero.imageUrl && !compact ? 'md:grid-cols-2' : ''">
-            <div :class="section.hero.align === 'center' && !section.hero.imageUrl ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl'">
-              <p v-if="section.hero.eyebrow" class="mb-3 text-xs uppercase tracking-[0.22em]" :style="{ color: 'var(--sf-accent)' }">{{ section.hero.eyebrow }}</p>
+        <section v-if="section.visible && section.type === 'hero' && section.hero" class="relative overflow-hidden" :class="heroSize(section.hero.size)" :style="heroBand(section.hero)">
+          <div v-if="layout.heroLayout === 'bleed' && section.hero.imageUrl" class="absolute inset-0" style="background: linear-gradient(90deg, var(--sf-bg) 0%, color-mix(in srgb, var(--sf-bg) 82%, transparent) 46%, transparent 100%)"></div>
+          <div class="mx-auto grid max-w-6xl items-center gap-8 px-4" :class="heroGrid(section.hero)">
+            <div :class="section.hero.align === 'center' && layout.heroLayout !== 'split' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl'">
+              <p v-if="section.hero.eyebrow" class="mb-3 text-xs uppercase tracking-[0.22em]" :style="{ color: layout.heroLayout === 'bleed' && !section.hero.imageUrl ? 'inherit' : 'var(--sf-accent)' }">{{ section.hero.eyebrow }}</p>
               <h1 class="leading-[0.95]" :class="heroType(section.hero.size)" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.hero.headline }}</h1>
-              <p v-if="section.hero.subheadline" class="mt-4 max-w-xl text-base leading-relaxed sm:text-lg" :style="{ color: 'var(--sf-muted)' }">{{ section.hero.subheadline }}</p>
+              <p v-if="section.hero.subheadline" class="mt-4 max-w-xl text-base leading-relaxed sm:text-lg" :style="{ color: layout.heroLayout === 'bleed' && !section.hero.imageUrl ? 'inherit' : 'var(--sf-muted)' }">{{ section.hero.subheadline }}</p>
               <component
                 :is="linkIs(section.hero.ctaTarget)"
                 v-bind="linkAttrs(section.hero.ctaTarget)"
                 class="mt-6 inline-flex px-5 py-2.5 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]"
-                :style="{ background: 'var(--sf-primary)', color: 'var(--sf-on)', borderRadius: 'var(--sf-radius)' }"
+                :style="buttonStyle(layout.heroLayout === 'bleed' && !section.hero.imageUrl)"
               >
                 {{ section.hero.ctaLabel }}
               </component>
             </div>
-            <img v-if="section.hero.imageUrl" :src="section.hero.imageUrl" alt="" class="w-full object-cover" :class="ratioClass()" :style="{ borderRadius: 'var(--sf-radius)' }" />
+            <img v-if="section.hero.imageUrl && layout.heroLayout !== 'bleed'" :src="section.hero.imageUrl" alt="" class="w-full object-cover" :class="[ratioClass(), layout.heroLayout === 'stack' ? 'order-first' : '']" :style="{ borderRadius: 'var(--sf-radius)' }" />
           </div>
         </section>
 
@@ -167,24 +221,38 @@ function headerClass() {
           <p class="text-sm tracking-wide" :style="{ color: 'var(--sf-muted)' }">{{ section.announcement.text }}</p>
         </section>
 
-        <section v-else-if="section.visible && (section.type === 'featured_products' || section.type === 'product_grid')" :id="section.type === 'product_grid' ? 'products' : undefined" class="mx-auto max-w-6xl px-4 py-12">
+        <section v-else-if="section.visible && (section.type === 'featured_products' || section.type === 'product_grid')" :id="section.type === 'product_grid' ? 'products' : undefined" class="mx-auto max-w-6xl px-4" :class="sectionPad()">
           <div class="mb-6 flex items-end justify-between gap-4">
             <h2 class="text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">
               {{ section.type === 'featured_products' ? section.featured?.title : section.productGrid?.title }}
             </h2>
           </div>
-          <div v-if="productsFor(section).length === 0" class="rounded-2xl border border-dashed px-4 py-10 text-sm" :style="{ borderColor: 'var(--sf-border)', color: 'var(--sf-muted)' }">
+          <div v-if="productsFor(section).length === 0" class="border border-dashed px-4 py-10 text-sm" :style="{ borderColor: 'var(--sf-border)', color: 'var(--sf-muted)', borderRadius: 'var(--sf-radius)' }">
             Published products from this shop will show up here.
+          </div>
+          <div v-else-if="layout.productDisplay === 'list'" class="divide-y" :style="{ borderColor: 'var(--sf-border)' }">
+            <component :is="interactive ? RouterLink : 'div'" v-for="product in productsFor(section)" :key="product.id" :to="paths.product(product.id)" class="flex items-center gap-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]">
+              <div class="h-20 w-16 shrink-0 overflow-hidden" :style="cardStyle()">
+                <img v-if="product.images[0]" :src="product.images[0]" :alt="product.name" class="h-full w-full object-cover" />
+                <div v-else class="grid h-full place-items-center text-lg" :style="{ color: 'var(--sf-muted)', fontFamily: 'var(--sf-heading)' }">{{ product.name.slice(0, 1) }}</div>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h3 class="truncate text-base font-medium">{{ product.name }}</h3>
+                <p v-if="product.category" class="text-xs" :style="{ color: 'var(--sf-muted)' }">{{ product.category }}</p>
+              </div>
+              <p class="text-sm">{{ priceVaries(product) ? 'From ' : '' }}{{ formatMoney(product.priceCents, store.currency) }}</p>
+            </component>
           </div>
           <div v-else class="grid gap-5" :class="columnsClass(section.type === 'product_grid' ? section.productGrid?.columns : 3)">
             <component
               :is="interactive ? RouterLink : 'div'"
-              v-for="product in productsFor(section)"
+              v-for="(product, index) in productsFor(section)"
               :key="product.id"
               :to="paths.product(product.id)"
               class="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:[outline-color:var(--sf-primary)]"
+              :class="layout.productDisplay === 'feature' && index === 0 && !compact ? 'sm:col-span-2' : ''"
             >
-              <div class="overflow-hidden" :style="{ background: 'var(--sf-surface)', borderRadius: 'var(--sf-radius)' }">
+              <div class="overflow-hidden" :style="cardStyle()">
                 <img v-if="product.images[0]" :src="product.images[0]" :alt="product.name" class="w-full object-cover transition duration-300 group-hover:scale-[1.02]" :class="ratioClass()" />
                 <div v-else class="grid place-items-center text-3xl" :class="ratioClass()" :style="{ color: 'var(--sf-muted)', fontFamily: 'var(--sf-heading)' }">{{ product.name.slice(0, 1) }}</div>
               </div>
@@ -208,7 +276,7 @@ function headerClass() {
           </div>
         </section>
 
-        <section v-else-if="section.visible && section.type === 'about' && section.about" id="about" class="mx-auto grid max-w-6xl gap-8 px-4 py-12" :class="compact ? '' : 'md:grid-cols-2'">
+        <section v-else-if="section.visible && section.type === 'about' && section.about" id="about" class="mx-auto grid max-w-6xl gap-8 px-4" :class="[sectionPad(), compact ? '' : 'md:grid-cols-2']">
           <div>
             <h2 class="text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.about.title }}</h2>
             <p class="mt-4 whitespace-pre-line leading-relaxed" :style="{ color: 'var(--sf-muted)' }">{{ section.about.body }}</p>
@@ -216,7 +284,7 @@ function headerClass() {
           <img v-if="section.about.imageUrl" :src="section.about.imageUrl" alt="" class="aspect-[4/3] w-full object-cover" :style="{ borderRadius: 'var(--sf-radius)' }" />
         </section>
 
-        <section v-else-if="section.visible && section.type === 'newsletter' && section.newsletter" class="mx-auto max-w-3xl px-4 py-14 text-center">
+        <section v-else-if="section.visible && section.type === 'newsletter' && section.newsletter" class="mx-auto max-w-3xl px-4 text-center" :class="sectionPad()">
           <h2 class="text-2xl sm:text-3xl" :style="{ fontFamily: 'var(--sf-heading)' }">{{ section.newsletter.title }}</h2>
           <p class="mt-3" :style="{ color: 'var(--sf-muted)' }">{{ section.newsletter.text }}</p>
         </section>

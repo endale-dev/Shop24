@@ -22,13 +22,15 @@ Each section has id, type, visible, and exactly one matching object: hero, produ
 Theme name: editorial, minimal, luxury, bold, playful, mono, or dark.
 Fonts: Instrument Serif, Fraunces, Newsreader, Outfit, Figtree, Literata.
 Colors are #rrggbb. Radius: none, sm, md, lg. Image ratio: square, portrait, landscape.
+Theme layout, each a string: density tight|regular|roomy, buttons fill|outline|link, cards flat|border|shadow, collections strip|feature|hidden, heroLayout stack|split|bleed, productDisplay grid|feature|list.
+Use those layout fields when the prompt asks for a different structure. A full-bleed hero is heroLayout bleed. Products in a list is productDisplay list. Hiding the collections block is collections hidden. Outline buttons are buttons outline. More space is density roomy.
 Header alignment is left or center. Nav targets are home, products, about, or cart.
 Hero size is sm, md, or lg. Hero align is left or center. Hero ctaTarget uses the nav targets.
 Do not invent products or a working email form. Product sections are filled from the live catalog.
 When revising, change only what the prompt asks for and keep the rest.
 Write concise shop copy that fits on a phone. version, columns, and limit must be JSON numbers. visible and showAnnouncement must be JSON booleans.
 Use these field names exactly. theme is an object with name, not a string. A hero uses hero.headline and hero.subheadline. An about section uses about.title and about.body.
-{"version":1,"theme":{"name":"minimal"},"header":{"announcement":"","showAnnouncement":false,"alignment":"left","nav":[{"label":"Shop","target":"products"}]},"sections":[{"id":"hero","type":"hero","visible":true,"hero":{"eyebrow":"Independent shop","headline":"Shop name","subheadline":"Short line about the shop.","ctaLabel":"Shop","ctaTarget":"products","imageUrl":"","align":"left","size":"md"}},{"id":"grid","type":"product_grid","visible":true,"productGrid":{"title":"The collection","columns":2,"limit":8}}],"footer":{"text":"© Shop name","links":[]}}`
+{"version":1,"theme":{"name":"minimal","density":"tight","buttons":"link","cards":"flat","collections":"strip","heroLayout":"stack","productDisplay":"grid"},"header":{"announcement":"","showAnnouncement":false,"alignment":"left","nav":[{"label":"Shop","target":"products"}]},"sections":[{"id":"hero","type":"hero","visible":true,"hero":{"eyebrow":"Independent shop","headline":"Shop name","subheadline":"Short line about the shop.","ctaLabel":"Shop","ctaTarget":"products","imageUrl":"","align":"left","size":"md"}},{"id":"grid","type":"product_grid","visible":true,"productGrid":{"title":"The collection","columns":2,"limit":8}}],"footer":{"text":"© Shop name","links":[]}}`
 
 type OpenAI struct {
 	key     string

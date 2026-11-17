@@ -185,7 +185,7 @@ async function submit() {
         </div>
         <button v-if="optionNames.length < 3" class="text-sm font-medium text-text underline" type="button" @click="addOption">Add option</button>
         <div class="space-y-3">
-          <div v-for="(variant, index) in variants" :key="index" class="rounded border border-border p-3">
+          <div v-for="(variant, index) in variants" :key="index" class="rounded border border-border bg-bg p-3">
             <div class="mb-3 flex items-center justify-between">
               <p class="text-sm font-semibold text-text">Version {{ index + 1 }}</p>
               <button v-if="variants.length > 1" class="text-sm text-muted hover:text-danger" type="button" @click="removeVariant(index)">Remove</button>

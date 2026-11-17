@@ -26,6 +26,12 @@ export type Theme = {
   fontBody: string
   radius: string
   imageRatio: string
+  density?: string
+  buttons?: string
+  cards?: string
+  collections?: string
+  heroLayout?: string
+  productDisplay?: string
 }
 
 export type HeroProps = {

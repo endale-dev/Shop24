@@ -9,12 +9,18 @@ type StorefrontConfig struct {
 }
 
 type Theme struct {
-	Name        string `json:"name"`
-	Colors      Colors `json:"colors"`
-	FontHeading string `json:"fontHeading"`
-	FontBody    string `json:"fontBody"`
-	Radius      string `json:"radius"`
-	ImageRatio  string `json:"imageRatio"`
+	Name           string `json:"name"`
+	Colors         Colors `json:"colors"`
+	FontHeading    string `json:"fontHeading"`
+	FontBody       string `json:"fontBody"`
+	Radius         string `json:"radius"`
+	ImageRatio     string `json:"imageRatio"`
+	Density        string `json:"density"`
+	Buttons        string `json:"buttons"`
+	Cards          string `json:"cards"`
+	Collections    string `json:"collections"`
+	HeroLayout     string `json:"heroLayout"`
+	ProductDisplay string `json:"productDisplay"`
 }
 
 type Colors struct {

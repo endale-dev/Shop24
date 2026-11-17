@@ -48,13 +48,20 @@ async function save() {
     <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
       <section class="overflow-x-auto rounded border border-border bg-surface p-4">
         <table class="w-full text-left text-sm">
-          <thead class="border-b border-border text-xs font-medium text-muted"><tr><th class="py-2 font-medium">Item</th><th class="font-medium">Qty</th><th class="font-medium">Price</th><th class="font-medium">Total</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Item</th>
+              <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Qty</th>
+              <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Price</th>
+              <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Total</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="item in order.items" :key="item.productId + item.sku" class="border-b border-border last:border-0">
-              <td class="py-3">{{ item.name }}<span v-if="item.optionLabel" class="block text-xs text-muted">{{ item.optionLabel }}</span><span class="block text-xs text-muted">{{ item.sku }}</span></td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ formatMoney(item.unitPriceCents, shop.shop?.currency) }}</td>
-              <td>{{ formatMoney(item.lineTotalCents, shop.shop?.currency) }}</td>
+              <td class="px-3 py-3">{{ item.name }}<span v-if="item.optionLabel" class="block text-xs text-muted">{{ item.optionLabel }}</span><span class="block text-xs text-muted">{{ item.sku }}</span></td>
+              <td class="px-3">{{ item.quantity }}</td>
+              <td class="px-3">{{ formatMoney(item.unitPriceCents, shop.shop?.currency) }}</td>
+              <td class="px-3">{{ formatMoney(item.lineTotalCents, shop.shop?.currency) }}</td>
             </tr>
           </tbody>
         </table>

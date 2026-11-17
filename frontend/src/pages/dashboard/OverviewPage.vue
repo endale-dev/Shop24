@@ -73,7 +73,7 @@ async function submitStore() {
     </form>
     <div v-else>
       <div class="mb-4 flex gap-2">
-        <button v-for="option in [7, 30, 90]" :key="option" type="button" class="rounded border px-3 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :class="days === option ? 'border-text bg-text text-white' : 'border-border bg-surface text-text hover:bg-bg'" @click="days = option; load()">{{ option }} days</button>
+        <button v-for="option in [7, 30, 90]" :key="option" type="button" class="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :class="days === option ? 'h-8 rounded border border-accent bg-accent px-2.5 text-sm text-white' : 'h-8 rounded border border-border bg-surface px-2.5 text-sm text-text hover:bg-bg'" @click="days = option; load()">{{ option }} days</button>
       </div>
       <div v-if="loading || !data" class="text-sm text-muted">Loading the numbers…</div>
       <template v-else>
@@ -92,7 +92,7 @@ async function submitStore() {
           <section class="rounded border border-border bg-surface p-4">
             <h2 class="text-sm font-semibold text-text">Revenue</h2>
             <div class="mt-4 flex h-36 items-end gap-1">
-              <div v-for="point in data.revenueOverTime" :key="point.date" class="group relative flex-1" :class="point.revenueCents ? 'bg-text' : 'bg-border'" :style="{ height: `${Math.max(point.revenueCents ? 8 : 2, (point.revenueCents / maxRevenue) * 100)}%` }">
+              <div v-for="point in data.revenueOverTime" :key="point.date" class="group relative flex-1" :class="point.revenueCents ? 'bg-accent' : 'bg-border'" :style="{ height: `${Math.max(point.revenueCents ? 8 : 2, (point.revenueCents / maxRevenue) * 100)}%` }">
                 <span class="pointer-events-none absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-text px-2 py-1 text-xs text-white group-hover:block">{{ point.date }} · {{ formatMoney(point.revenueCents, shop.shop.currency) }}</span>
               </div>
             </div>
@@ -114,7 +114,7 @@ async function submitStore() {
             <EmptyState v-if="data.recentOrders.length === 0" class="mt-3" icon="inbox" title="No orders yet" body="They will show up here after a customer checks out." />
             <ul v-else class="mt-3 divide-y divide-border">
               <li v-for="order in data.recentOrders" :key="order.id">
-                <RouterLink class="flex items-center justify-between py-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :to="`/orders/${order.id}`">
+                <RouterLink class="flex items-center justify-between py-3 text-sm hover:bg-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :to="`/orders/${order.id}`">
                   <span>{{ order.customer.name }} · {{ formatDate(order.createdAt) }}</span>
                   <span>{{ formatMoney(order.totalCents, shop.shop.currency) }}</span>
                 </RouterLink>
@@ -127,7 +127,7 @@ async function submitStore() {
             <EmptyState v-if="data.lowStock.length === 0" class="mt-3" icon="inbox" title="Stock looks fine" />
             <ul v-else class="mt-3 space-y-2">
               <li v-for="product in data.lowStock" :key="product.id" class="flex items-center justify-between text-sm">
-                <RouterLink class="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :to="`/products/${product.id}`">{{ product.name }}</RouterLink>
+                <RouterLink class="hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" :to="`/products/${product.id}`">{{ product.name }}</RouterLink>
                 <Badge :tone="product.stock === 0 ? 'bad' : 'warn'">{{ product.stock }} left</Badge>
               </li>
             </ul>

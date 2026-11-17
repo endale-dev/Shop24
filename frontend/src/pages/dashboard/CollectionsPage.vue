@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Icon from '@/components/ui/Icon.vue'
@@ -52,21 +53,26 @@ onMounted(load)
       <Button to="/collections/new"><Icon name="plus" /> Add a collection</Button>
     </EmptyState>
     <div v-else class="overflow-x-auto rounded border border-border bg-surface">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-border text-xs font-medium text-muted">
-          <tr><th class="px-4 py-3 font-medium">Collection</th><th class="px-4 py-3 font-medium">Products</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium"></th></tr>
+      <table class="w-full border-separate border-spacing-0 text-left text-sm">
+        <thead>
+          <tr>
+            <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Collection</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-right text-xs font-medium text-muted">Products</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted">Status</th>
+            <th class="border-b border-border bg-bg px-3 py-2 text-left text-xs font-medium text-muted"><span class="sr-only">Actions</span></th>
+          </tr>
         </thead>
         <tbody>
-          <tr v-for="item in items" :key="item.id" class="border-b border-border last:border-0 hover:bg-bg">
-            <td class="px-4 py-3">
-              <p class="font-medium">{{ item.name }}</p>
+          <tr v-for="item in items" :key="item.id" class="hover:bg-bg">
+            <td class="border-b border-border px-3 py-2 align-middle">
+              <RouterLink class="font-medium hover:underline" :to="`/collections/${item.id}`">{{ item.name }}</RouterLink>
               <p class="text-xs text-muted">/c/{{ item.slug }}</p>
             </td>
-            <td class="px-4 py-3">{{ item.productIds.length }}</td>
-            <td class="px-4 py-3">{{ item.published ? 'Published' : 'Draft' }}</td>
-            <td class="px-4 py-3 text-right">
-              <RouterLink class="mr-3 text-text underline" :to="`/collections/${item.id}`">Edit</RouterLink>
-              <button class="text-muted hover:text-danger" type="button" @click="pendingDelete = item">Delete</button>
+            <td class="border-b border-border px-3 py-2 text-right align-middle tabular-nums">{{ item.productIds.length }}</td>
+            <td class="border-b border-border px-3 py-2 align-middle"><Badge :tone="item.published ? 'good' : 'neutral'">{{ item.published ? 'Published' : 'Draft' }}</Badge></td>
+            <td class="whitespace-nowrap border-b border-border px-3 py-2 text-right align-middle">
+              <RouterLink class="underline" :to="`/collections/${item.id}`">Edit</RouterLink>
+              <button class="ml-3 text-danger hover:underline" type="button" @click="pendingDelete = item">Delete</button>
             </td>
           </tr>
         </tbody>

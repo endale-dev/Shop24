@@ -105,6 +105,59 @@ func applyPrompt(cfg *models.StorefrontConfig, prompt string, generate bool) []s
 	if strings.Contains(prompt, "featured") {
 		setVisible(cfg, storefront.SectionFeatured, true)
 	}
+	notes = append(notes, applyLayout(cfg, prompt)...)
+	return notes
+}
+
+func applyLayout(cfg *models.StorefrontConfig, prompt string) []string {
+	notes := []string{}
+	switch {
+	case containsAny(prompt, "full bleed", "full-bleed", "banner hero"):
+		cfg.Theme.HeroLayout = "bleed"
+		notes = append(notes, "a full-bleed hero")
+	case containsAny(prompt, "split hero"):
+		cfg.Theme.HeroLayout = "split"
+		notes = append(notes, "a split hero")
+	case containsAny(prompt, "stacked hero", "hero stacked"):
+		cfg.Theme.HeroLayout = "stack"
+		notes = append(notes, "a stacked hero")
+	}
+	switch {
+	case containsAny(prompt, "product list", "as a list", "list the products"):
+		cfg.Theme.ProductDisplay = "list"
+		notes = append(notes, "products in a list")
+	case containsAny(prompt, "feature the first", "large first product"):
+		cfg.Theme.ProductDisplay = "feature"
+		notes = append(notes, "a large first product")
+	}
+	switch {
+	case containsAny(prompt, "outline button"):
+		cfg.Theme.Buttons = "outline"
+		notes = append(notes, "outline buttons")
+	case containsAny(prompt, "text button", "link button", "underline button"):
+		cfg.Theme.Buttons = "link"
+		notes = append(notes, "text buttons")
+	}
+	if containsAny(prompt, "hide collection", "hide the collections", "without collections") {
+		cfg.Theme.Collections = "hidden"
+		notes = append(notes, "collections hidden")
+	}
+	if containsAny(prompt, "more space", "more room", "roomy", "spacious") {
+		cfg.Theme.Density = "roomy"
+		notes = append(notes, "more space")
+	}
+	if containsAny(prompt, "tighter", "less space", "compact layout") {
+		cfg.Theme.Density = "tight"
+		notes = append(notes, "a tighter layout")
+	}
+	if containsAny(prompt, "card border", "bordered card", "framed card") {
+		cfg.Theme.Cards = "border"
+		notes = append(notes, "bordered cards")
+	}
+	if strings.Contains(prompt, "card shadow") || strings.Contains(prompt, "soft shadow") {
+		cfg.Theme.Cards = "shadow"
+		notes = append(notes, "soft card shadows")
+	}
 	return notes
 }
 

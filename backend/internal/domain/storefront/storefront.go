@@ -70,30 +70,37 @@ func Preset(name string) models.Theme {
 	presets := map[string]models.Theme{
 		"editorial": {
 			Name: "editorial", FontHeading: "Fraunces", FontBody: "Figtree", Radius: "md", ImageRatio: "portrait",
+			Density: "roomy", Buttons: "fill", Cards: "border", Collections: "strip", HeroLayout: "split", ProductDisplay: "feature",
 			Colors: models.Colors{Background: "#f6f1e8", Surface: "#fffdf8", Text: "#1f1a17", Muted: "#6f655d", Primary: "#9a3412", OnPrimary: "#fff7ed", Accent: "#b45309", Border: "#e6ddd1"},
 		},
 		"minimal": {
 			Name: "minimal", FontHeading: "Outfit", FontBody: "Figtree", Radius: "sm", ImageRatio: "square",
+			Density: "tight", Buttons: "link", Cards: "flat", Collections: "strip", HeroLayout: "stack", ProductDisplay: "grid",
 			Colors: models.Colors{Background: "#ffffff", Surface: "#fafafa", Text: "#171717", Muted: "#737373", Primary: "#171717", OnPrimary: "#ffffff", Accent: "#404040", Border: "#e5e5e5"},
 		},
 		"mono": {
 			Name: "mono", FontHeading: "Outfit", FontBody: "Figtree", Radius: "sm", ImageRatio: "square",
+			Density: "tight", Buttons: "outline", Cards: "flat", Collections: "hidden", HeroLayout: "stack", ProductDisplay: "list",
 			Colors: models.Colors{Background: "#ffffff", Surface: "#f4f4f5", Text: "#111111", Muted: "#52525b", Primary: "#111111", OnPrimary: "#ffffff", Accent: "#18181b", Border: "#e4e4e7"},
 		},
 		"luxury": {
 			Name: "luxury", FontHeading: "Instrument Serif", FontBody: "Figtree", Radius: "none", ImageRatio: "portrait",
+			Density: "roomy", Buttons: "outline", Cards: "flat", Collections: "feature", HeroLayout: "bleed", ProductDisplay: "feature",
 			Colors: models.Colors{Background: "#100e0c", Surface: "#1a1714", Text: "#f6f1e7", Muted: "#b7ab9a", Primary: "#c6a15b", OnPrimary: "#1a1408", Accent: "#e7d3a1", Border: "#3a342c"},
 		},
 		"bold": {
 			Name: "bold", FontHeading: "Outfit", FontBody: "Figtree", Radius: "lg", ImageRatio: "square",
+			Density: "regular", Buttons: "fill", Cards: "shadow", Collections: "strip", HeroLayout: "bleed", ProductDisplay: "grid",
 			Colors: models.Colors{Background: "#fff7ed", Surface: "#ffffff", Text: "#1c1917", Muted: "#78716c", Primary: "#ea580c", OnPrimary: "#ffffff", Accent: "#0f172a", Border: "#fed7aa"},
 		},
 		"playful": {
 			Name: "playful", FontHeading: "Fraunces", FontBody: "Outfit", Radius: "lg", ImageRatio: "square",
+			Density: "regular", Buttons: "fill", Cards: "shadow", Collections: "strip", HeroLayout: "stack", ProductDisplay: "grid",
 			Colors: models.Colors{Background: "#fdf2f8", Surface: "#ffffff", Text: "#3b0764", Muted: "#7e22ce", Primary: "#db2777", OnPrimary: "#ffffff", Accent: "#0891b2", Border: "#fbcfe8"},
 		},
 		"dark": {
 			Name: "dark", FontHeading: "Outfit", FontBody: "Figtree", Radius: "md", ImageRatio: "portrait",
+			Density: "roomy", Buttons: "fill", Cards: "border", Collections: "feature", HeroLayout: "bleed", ProductDisplay: "feature",
 			Colors: models.Colors{Background: "#121212", Surface: "#1c1c1c", Text: "#f5f5f5", Muted: "#a3a3a3", Primary: "#f5f5f5", OnPrimary: "#111111", Accent: "#d4d4d4", Border: "#2e2e2e"},
 		},
 	}
@@ -111,7 +118,7 @@ func Normalize(in models.StorefrontConfig) models.StorefrontConfig {
 	if _, ok := themes[themeName]; ok {
 		base = Preset(themeName)
 	}
-	if in.Theme.FontHeading != "" || in.Theme.Colors.Background != "" || in.Theme.Radius != "" {
+	if themeCustomized(in.Theme) {
 		base = overlayTheme(base, in.Theme)
 	}
 	header := models.Header{
@@ -143,8 +150,19 @@ func overlayTheme(base, in models.Theme) models.Theme {
 	}
 	base.Radius = oneOf(in.Radius, base.Radius, "none", "sm", "md", "lg")
 	base.ImageRatio = oneOf(in.ImageRatio, base.ImageRatio, "square", "portrait", "landscape")
+	base.Density = oneOf(in.Density, base.Density, "tight", "regular", "roomy")
+	base.Buttons = oneOf(in.Buttons, base.Buttons, "fill", "outline", "link")
+	base.Cards = oneOf(in.Cards, base.Cards, "flat", "border", "shadow")
+	base.Collections = oneOf(in.Collections, base.Collections, "strip", "feature", "hidden")
+	base.HeroLayout = oneOf(in.HeroLayout, base.HeroLayout, "stack", "split", "bleed")
+	base.ProductDisplay = oneOf(in.ProductDisplay, base.ProductDisplay, "grid", "feature", "list")
 	base.Colors = overlayColors(base.Colors, in.Colors)
 	return base
+}
+
+func themeCustomized(in models.Theme) bool {
+	return in.FontHeading != "" || in.FontBody != "" || in.Colors.Background != "" || in.Radius != "" || in.ImageRatio != "" ||
+		in.Density != "" || in.Buttons != "" || in.Cards != "" || in.Collections != "" || in.HeroLayout != "" || in.ProductDisplay != ""
 }
 
 func overlayColors(base, in models.Colors) models.Colors {
